@@ -24,7 +24,14 @@ export default function SettingsPage() {
           <option value="byo">Use My Own API Key</option>
         </select>
       </section>
+      <section>
+  <h2 className="font-medium">Upcoming Features</h2>
 
+  <ul className="text-sm text-gray-600 space-y-1 mt-2">
+    <li>🖼️ Image Generation — Coming Soon</li>
+    <li>🎤 Voice Input & Output — Coming Soon</li>
+  </ul>
+</section>
       {mode === "byo" && (
         <section className="space-y-2">
           <p className="text-sm text-gray-600">
