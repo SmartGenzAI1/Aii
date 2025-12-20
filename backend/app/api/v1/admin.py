@@ -1,19 +1,25 @@
 # backend/app/api/v1/admin.py
+# Admin-only endpoints (read-only)
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from app.deps.auth import get_current_user
+from app.core.config import settings
 from app.db.models import User
+from datetime import datetime
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
-ADMIN_EMAILS = {"your@email.com"}
+def require_admin(user: User):
+    if user.email not in settings.ADMIN_EMAILS:
+        raise HTTPException(status_code=403, detail="Forbidden")
 
-@router.get("/stats")
-async def stats(user: User = Depends(get_current_user)):
-    if user.email not in ADMIN_EMAILS:
-        return {"error": "Forbidden"}
+@router.get("/overview")
+async def overview(user: User = Depends(get_current_user)):
+    require_admin(user)
 
     return {
-        "total_users": 123,
-        "requests_today": 456,
+        "service": "GenZ AI",
+        "status": "operational",
+        "timestamp": datetime.utcnow().isoformat(),
+        "notes": "All systems nominal"
     }
