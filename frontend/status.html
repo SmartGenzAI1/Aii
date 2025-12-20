@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>GenZ AI – System Status</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <style>
+    :root {
+      --green: #22c55e;
+      --orange: #f59e0b;
+      --red: #ef4444;
+      --bg: #0b0f1a;
+      --card: #11162a;
+      --text: #e5e7eb;
+      --muted: #9ca3af;
+    }
+
+    body {
+      margin: 0;
+      font-family: Inter, system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 60px auto;
+      padding: 20px;
+    }
+
+    h1 {
+      font-size: 32px;
+      margin-bottom: 8px;
+    }
+
+    p {
+      color: var(--muted);
+      margin-bottom: 40px;
+    }
+
+    .services {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 20px;
+    }
+
+    .card {
+      background: var(--card);
+      border-radius: 14px;
+      padding: 20px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.3);
+    }
+
+    .card h3 {
+      margin: 0 0 12px;
+      font-size: 18px;
+    }
+
+    .bar-wrapper {
+      height: 120px;
+      display: flex;
+      align-items: flex-end;
+    }
+
+    .bar {
+      width: 100%;
+      border-radius: 10px;
+      transition: height .6s ease, background .3s;
+    }
+
+    .uptime {
+      margin-top: 10px;
+      font-size: 14px;
+      color: var(--muted);
+    }
+
+    footer {
+      margin-top: 60px;
+      text-align: center;
+      font-size: 13px;
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h1>GenZ AI System Status</h1>
+  <p>Live availability of our AI providers</p>
+
+  <div class="services">
+    <div class="card">
+      <h3>Groq</h3>
+      <div class="bar-wrapper">
+        <div id="groq" class="bar"></div>
+      </div>
+      <div class="uptime" id="groqText"></div>
+    </div>
+
+    <div class="card">
+      <h3>OpenRouter</h3>
+      <div class="bar-wrapper">
+        <div id="openrouter" class="bar"></div>
+      </div>
+      <div class="uptime" id="orText"></div>
+    </div>
+
+    <div class="card">
+      <h3>Hugging Face</h3>
+      <div class="bar-wrapper">
+        <div id="hf" class="bar"></div>
+      </div>
+      <div class="uptime" id="hfText"></div>
+    </div>
+  </div>
+
+  <footer>
+    © 2025 GenZ AI · All systems monitored in real-time
+  </footer>
+</div>
+
+<script>
+  const API = "https://aii-snyi.onrender.com/status";
+
+  function color(pct) {
+    if (pct >= 80) return "var(--green)";
+    if (pct >= 50) return "var(--orange)";
+    return "var(--red)";
+  }
+
+  async function loadStatus() {
+    const res = await fetch(API);
+    const data = await res.json();
+
+    set("groq", data.groq, "groqText");
+    set("openrouter", data.openrouter, "orText");
+    set("hf", data.huggingface, "hfText");
+  }
+
+  function set(id, pct, textId) {
+    const bar = document.getElementById(id);
+    bar.style.height = pct + "%";
+    bar.style.background = color(pct);
+    document.getElementById(textId).innerText =
+      pct + "% available";
+  }
+
+  loadStatus();
+  setInterval(loadStatus, 30000);
+</script>
+
+</body>
+</html>
