@@ -1,156 +1,191 @@
 # backend/app/main.py
-
-import time
-import random
-from collections import deque, defaultdict
-from typing import Dict, List
-
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+import time
+import random
+import httpx
+import os
+import logging
 
-# =========================
-# APP
-# =========================
-app = FastAPI(
-    title="AII Backend",
-    version="1.0.0",
-    docs_url="/docs",
-)
+# -------------------------------------------------
+# App setup
+# -------------------------------------------------
+app = FastAPI(title="GenZ AI Backend", version="1.0")
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# =========================
-# PROVIDER CONFIG
-# =========================
-PROVIDERS = {
-    "groq": {
-        "keys": ["GROQ_KEY_1", "GROQ_KEY_2", "GROQ_KEY_3"],
-        "rpm": 50,
-    },
-    "openrouter": {
-        "keys": ["OPENROUTER_KEY_1", "OPENROUTER_KEY_2"],
-        "rpm": 30,
-    },
-    "huggingface": {
-        "keys": ["HF_KEY_1"],
-        "rpm": 20,
-    },
-    "scraper": {
-        "keys": ["SCRAPER"],
-        "rpm": 100,
-    },
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("genz-ai")
+
+# -------------------------------------------------
+# ENV CONFIG (Render / Prod safe)
+# -------------------------------------------------
+GROQ_KEYS = os.getenv("GROQ_API_KEYS", "").split(",")
+OPENROUTER_KEYS = os.getenv("OPENROUTER_API_KEYS", "").split(",")
+HF_KEY = os.getenv("HUGGINGFACE_API_KEY")
+
+APP_URL = os.getenv("APP_URL", "https://aii-snyi.onrender.com")
+
+GROQ_MODEL = "llama-3.1-8b-instant"
+OR_MODEL_FAST = "meta-llama/llama-3-8b-instruct"
+OR_MODEL_SMART = "meta-llama/llama-3-70b-instruct"
+
+# -------------------------------------------------
+# Rate limit config (RPM)
+# -------------------------------------------------
+LIMITS = {
+    "groq": 49,
+    "openrouter": 60,
+    "huggingface": 30,
 }
 
-# =========================
-# RATE LIMIT ENGINE
-# =========================
-WINDOW = 60  # seconds
-usage: Dict[str, Dict[str, deque]] = defaultdict(lambda: defaultdict(deque))
+usage = {
+    "groq": {},
+    "openrouter": {},
+    "huggingface": {},
+}
 
-def allow_request(provider: str, key: str, limit: int) -> bool:
+def _clean(ts):
     now = time.time()
-    q = usage[provider][key]
+    return [t for t in ts if now - t < 60]
 
-    while q and q[0] <= now - WINDOW:
-        q.popleft()
+def can_use(provider, key):
+    usage[provider].setdefault(key, [])
+    usage[provider][key] = _clean(usage[provider][key])
+    return len(usage[provider][key]) < LIMITS[provider]
 
-    if len(q) >= limit:
-        return False
+def mark_use(provider, key):
+    usage[provider][key].append(time.time())
 
-    q.append(now)
-    return True
+# -------------------------------------------------
+# Provider calls
+# -------------------------------------------------
+async def groq_call(prompt: str):
+    random.shuffle(GROQ_KEYS)
+    for key in GROQ_KEYS:
+        if not can_use("groq", key):
+            continue
+        try:
+            async with httpx.AsyncClient(timeout=15) as client:
+                r = await client.post(
+                    "https://api.groq.com/openai/v1/chat/completions",
+                    headers={"Authorization": f"Bearer {key}"},
+                    json={
+                        "model": GROQ_MODEL,
+                        "messages": [{"role": "user", "content": prompt}],
+                    },
+                )
+            r.raise_for_status()
+            mark_use("groq", key)
+            return r.json()["choices"][0]["message"]["content"]
+        except Exception as e:
+            logger.warning(f"Groq failed: {e}")
+    raise RuntimeError("Groq unavailable")
 
-def get_available_provider() -> Dict:
-    for provider, cfg in PROVIDERS.items():
-        for key in cfg["keys"]:
-            if allow_request(provider, key, cfg["rpm"]):
-                return {
-                    "provider": provider,
-                    "key": key
-                }
-    raise HTTPException(status_code=429, detail="All providers rate-limited")
+async def openrouter_call(prompt: str, smart=False):
+    model = OR_MODEL_SMART if smart else OR_MODEL_FAST
+    random.shuffle(OPENROUTER_KEYS)
+    for key in OPENROUTER_KEYS:
+        if not can_use("openrouter", key):
+            continue
+        try:
+            async with httpx.AsyncClient(timeout=20) as client:
+                r = await client.post(
+                    "https://openrouter.ai/api/v1/chat/completions",
+                    headers={
+                        "Authorization": f"Bearer {key}",
+                        "HTTP-Referer": APP_URL,
+                        "X-Title": "GenZ AI",
+                    },
+                    json={
+                        "model": model,
+                        "messages": [{"role": "user", "content": prompt}],
+                    },
+                )
+            r.raise_for_status()
+            mark_use("openrouter", key)
+            return r.json()["choices"][0]["message"]["content"]
+        except Exception as e:
+            logger.warning(f"OpenRouter failed: {e}")
+    raise RuntimeError("OpenRouter unavailable")
 
-# =========================
-# STATUS STORAGE
-# =========================
-STATUS_HISTORY: Dict[str, List[str]] = defaultdict(list)
-MAX_POINTS = 120  # vertical bars
+async def hf_call(prompt: str):
+    if not can_use("huggingface", HF_KEY):
+        raise RuntimeError("HF limit")
+    async with httpx.AsyncClient(timeout=25) as client:
+        r = await client.post(
+            "https://api-inference.huggingface.co/models/google/flan-t5-large",
+            headers={"Authorization": f"Bearer {HF_KEY}"},
+            json={"inputs": prompt},
+        )
+    r.raise_for_status()
+    mark_use("huggingface", HF_KEY)
+    return r.json()[0]["generated_text"]
 
-def record_status(name: str, ok: bool):
-    STATUS_HISTORY[name].append("green" if ok else "red")
-    if len(STATUS_HISTORY[name]) > MAX_POINTS:
-        STATUS_HISTORY[name].pop(0)
+# -------------------------------------------------
+# Router logic (fallback + modes)
+# -------------------------------------------------
+async def generate(prompt: str, mode: str):
+    try:
+        if mode == "fast":
+            return await groq_call(prompt)
 
-# =========================
-# HEALTH
-# =========================
+        if mode == "balanced":
+            try:
+                return await openrouter_call(prompt)
+            except:
+                return await groq_call(prompt)
+
+        if mode == "smart":
+            try:
+                return await openrouter_call(prompt, smart=True)
+            except:
+                return await hf_call(prompt)
+
+        raise ValueError("Invalid mode")
+
+    except Exception as e:
+        logger.error(e)
+        return "AI is temporarily unavailable. Please try again."
+
+# -------------------------------------------------
+# API Models
+# -------------------------------------------------
+class ChatRequest(BaseModel):
+    prompt: str
+    mode: str = "balanced"
+
+# -------------------------------------------------
+# API Routes
+# -------------------------------------------------
 @app.get("/")
 def root():
     return {"status": "ok"}
 
-# =========================
-# STATUS API (FOR FRONTEND BARS)
-# =========================
+@app.post("/chat")
+async def chat(req: ChatRequest):
+    response = await generate(req.prompt, req.mode)
+    return {
+        "assistant": "GenZ",
+        "mode": req.mode,
+        "response": response,
+    }
+
 @app.get("/status")
 def status():
-    response = {}
-    for provider in PROVIDERS.keys():
-        history = STATUS_HISTORY.get(provider, [])
-        uptime = round(
-            (history.count("green") / max(len(history), 1)) * 100, 2
-        )
-        response[provider] = {
-            "bars": history,
-            "uptime": uptime,
-        }
-    return response
+    def pct(provider):
+        used = sum(len(v) for v in usage[provider].values())
+        limit = LIMITS[provider]
+        return min(100, int((used / limit) * 100)) if used else 100
 
-# =========================
-# AI REQUEST ROUTE
-# =========================
-@app.post("/ai")
-def ai_request(prompt: str):
-    try:
-        slot = get_available_provider()
-        provider = slot["provider"]
-
-        # ---- MOCK RESPONSE (replace later with real API call) ----
-        time.sleep(0.2)
-        result = f"Response from {provider}"
-
-        record_status(provider, True)
-        return {
-            "provider": provider,
-            "response": result
-        }
-
-    except HTTPException:
-        for p in PROVIDERS:
-            record_status(p, False)
-        raise
-
-# =========================
-# WEB SEARCH / SCRAPER
-# =========================
-@app.get("/search")
-def web_search(q: str):
-    provider = "scraper"
-    try:
-        allow = allow_request(provider, "SCRAPER", PROVIDERS["scraper"]["rpm"])
-        if not allow:
-            raise HTTPException(status_code=429, detail="Scraper rate-limited")
-
-        # ---- SCRAPE PLACEHOLDER ----
-        result = f"Scraped result for: {q}"
-        record_status(provider, True)
-        return {"result": result}
-
-    except:
-        record_status(provider, False)
-        raise HTTPException(status_code=500, detail="Scraper failed")
+    return {
+        "groq": pct("groq"),
+        "openrouter": pct("openrouter"),
+        "huggingface": pct("huggingface"),
+}
