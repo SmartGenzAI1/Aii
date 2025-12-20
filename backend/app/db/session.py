@@ -1,8 +1,10 @@
 # backend/app/db/session.py
 
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import declarative_base
 from app.core.config import settings
+
+Base = declarative_base()
 
 engine = create_engine(
     settings.DATABASE_URL,
@@ -11,8 +13,5 @@ engine = create_engine(
     max_overflow=10,
 )
 
-SessionLocal = sessionmaker(
-    autocommit=False,
-    autoflush=False,
-    bind=engine,
-)
+def init_db():
+    Base.metadata.create_all(bind=engine)
