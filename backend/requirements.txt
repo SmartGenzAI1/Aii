@@ -7,3 +7,4 @@ pydantic>=2.7
 python-jose[cryptography]
 passlib[bcrypt]
 httpx
+pydantic-settings>=2.2
