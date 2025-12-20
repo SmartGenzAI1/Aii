@@ -1,20 +1,20 @@
 # backend/app/api/v1/health.py
 
 from fastapi import APIRouter
+from datetime import datetime
 
 router = APIRouter(tags=["health"])
 
-
 @router.get("/health")
-async def health_check():
+async def health():
     """
-    Health endpoint.
-    Used by:
-    - Render health checks
-    - UptimeRobot / cron pings
-    - Cold-start detection
+    Public health endpoint.
+    Used by frontend and uptime monitors.
     """
+
+    # This can later check provider availability
     return {
-        "status": "ok",
-        "service": "backend",
+        "status": "ok",            # ok | degraded | down
+        "ai": "operational",
+        "timestamp": datetime.utcnow().isoformat()
     }
