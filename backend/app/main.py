@@ -6,8 +6,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.core.logging import setup_logging
 from app.api.v1.health import router as health_router
+from app.api.v1.chat import router as chat_router
 
-# Setup logging immediately (before app creation)
 setup_logging()
 
 app = FastAPI(
@@ -15,10 +15,8 @@ app = FastAPI(
     debug=settings.DEBUG,
     version="1.0.0",
     docs_url="/docs" if settings.DEBUG else None,
-    redoc_url=None,
 )
 
-# CORS — frontend will be on Vercel
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # tighten later
@@ -27,16 +25,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# API routes
-app.include_router(
-    health_router,
-    prefix="/api/v1",
-)
+app.include_router(health_router, prefix="/api/v1")
+app.include_router(chat_router, prefix="/api/v1")
+
 
 @app.get("/")
 async def root():
-    """
-    Root endpoint.
-    Cheap response for cold-start wakeup.
-    """
-    return {"message": "Backend running"}
+    return {"status": "running"}
