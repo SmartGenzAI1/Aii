@@ -1,11 +1,16 @@
 # backend/app/main.py
 
 from fastapi import FastAPI
-from app.db.models import Base
+from sqlalchemy.exc import OperationalError
+from app.db.base import Base
 from app.db.session import engine
 
-app = FastAPI(title="GenZ AI")
+app = FastAPI(title="GenZ AI Backend")
 
 @app.on_event("startup")
 def startup():
-    Base.metadata.create_all(bind=engine)
+    try:
+        Base.metadata.create_all(bind=engine)
+        print("Database connected and tables ready")
+    except OperationalError as e:
+        print("Database not ready yet:", e)
