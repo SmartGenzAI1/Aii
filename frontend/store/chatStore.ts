@@ -32,3 +32,6 @@ export const useChatStore = create<State>((set) => ({
 
   setModel: (model) => set({ model }),
 }));
+
+isStreaming: false,
+setStreaming: (v: boolean) => set({ isStreaming: v }),
