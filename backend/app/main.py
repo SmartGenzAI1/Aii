@@ -7,7 +7,14 @@ from app.core.config import settings
 from app.core.logging import setup_logging
 from app.api.v1.health import router as health_router
 from app.api.v1.chat import router as chat_router
+from app.db.models import Base
+from app.db.session import engine
+app = FastAPI(title="GenZ AI")
 
+@app.on_event("startup")
+def on_startup():
+    # Auto-create tables
+    Base.metadata.create_all(bind=engine)
 setup_logging()
 
 app = FastAPI(
