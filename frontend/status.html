@@ -149,6 +149,38 @@
   loadStatus();
   setInterval(loadStatus, 30000);
 </script>
+<script>
+const API_BASE = "https://aii-snyi.onrender.com";
 
+async function loadStatus() {
+  try {
+    const res = await fetch(`${API_BASE}/status`);
+    const data = await res.json();
+
+    updateBar("groq", data.groq);
+    updateBar("openrouter", data.openrouter);
+    updateBar("huggingface", data.huggingface);
+  } catch (e) {
+    console.error("Status fetch failed", e);
+  }
+}
+
+function updateBar(id, uptime) {
+  const el = document.getElementById(id);
+  el.style.height = uptime + "%";
+  el.className =
+    uptime > 95 ? "green" :
+    uptime > 85 ? "orange" :
+    "red";
+}
+
+setInterval(loadStatus, 30000);
+loadStatus();
+</script>
+
+  <div class="bar" id="groq"></div>
+<div class="bar" id="openrouter"></div>
+<div class="bar" id="huggingface"></div>
+  
 </body>
 </html>
