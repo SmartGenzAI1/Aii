@@ -31,3 +31,7 @@ class Settings(BaseSettings):
 
 # Singleton settings object (import-safe, fast)
 settings = Settings()
+
+ADMIN_EMAILS: set[str] = {
+    "your@email.com"
+}
