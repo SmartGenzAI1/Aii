@@ -1,6 +1,18 @@
 #backend/app/services/adapters/huggingface.py
 
 import httpx
+from app.services.providers.base import BaseProvider
+
+
+class HuggingFaceProvider(BaseProvider):
+    name = "huggingface"
+
+    async def health_check(self) -> None:
+        async with httpx.AsyncClient(timeout=10) as client:
+            r = await client.get("https://huggingface.co")
+            if r.status_code >= 400:
+                raise RuntimeError("HuggingFace unavailable")
+
 
 async def generate(prompt: str, api_key: str):
     headers = {"Authorization": f"Bearer {api_key}"}
