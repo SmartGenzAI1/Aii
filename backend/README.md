@@ -1,11 +1,11 @@
-GenZ AI  Backend Service
+# GenZ AI  Backend Service
 
       
 
+---
 
-
-Overview
-
+# Overview
+---
 GenZ AI Backend is a production-ready, multi-provider AI orchestration service built with FastAPI.
 It intelligently routes requests across multiple AI providers (Groq, OpenRouter, HuggingFace, Web Search) while enforcing rate limits, uptime monitoring, fallback routing, and security controls.
 
@@ -72,7 +72,7 @@ Clear separation of concerns
 
 ---
 
-Architecture Overview
+# Architecture Overview
 
 flowchart TB
     Client -->|HTTPS| FastAPI
@@ -93,7 +93,7 @@ flowchart TB
 
 ---
 
-Tech Stack
+# Tech Stack
 
 Layer	Technology
 
@@ -110,7 +110,7 @@ Docs	OpenAPI / Swagger
 
 ---
 
-Project Structure
+# Project Structure
 
 backend/app
 ├── main.py                 # App entrypoint
@@ -158,7 +158,7 @@ backend/app
 
 ---
 
-Environment Variables
+# Environment Variables
 
 DATABASE_URL=postgresql+psycopg://user:password@host:5432/db
 JWT_SECRET=your-strong-secret
@@ -176,7 +176,7 @@ HUGGINGFACE_API_KEY=xxx
 
 ---
 
-API Documentation
+# API Documentation
 
 Once running, access:
 
@@ -190,7 +190,7 @@ https://<your-domain>/openapi.json
 
 ---
 
-Status System Design
+# Status System Design
 
 The backend exposes machine-readable status data only.
 
@@ -223,7 +223,7 @@ This clean separation ensures scalability and flexibility.
 
 ---
 
-Security Model
+# Security Model
 
 JWT authentication on protected routes
 
@@ -239,7 +239,7 @@ Admin routes restricted by role
 
 ---
 
-Deployment Notes
+# Deployment Notes
 
 Render
 
@@ -278,14 +278,14 @@ Zero hardcoded secrets
 
 ---
 
-License
+# License
 
 MIT License © GenZ AI
 
 
 ---
 
-Maintainers
+## Maintainers
 
 Built and maintained by GenZ AI Team
 Designed for scale, reliability, and extensibility.
