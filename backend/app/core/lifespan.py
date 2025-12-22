@@ -2,10 +2,10 @@
 
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
+from app.services.provider_monitor import start_provider_monitor
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup logic (DB checks, migrations, etc.)
+    start_provider_monitor()
     yield
-    # Shutdown logic
