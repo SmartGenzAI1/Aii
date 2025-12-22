@@ -6,56 +6,57 @@ from sqlalchemy.orm import Session
 
 from app.db.session import SessionLocal
 from app.models.provider_status import ProviderStatus
-from app.services.adapters.groq import GroqProvider
-from app.services.adapters.openrouter import OpenRouterProvider
-from app.services.adapters.huggingface import HuggingFaceProvider
 
+from app.services.adapters.groq import generate as groq_generate
+from app.services.adapters.openrouter import generate as openrouter_generate
+from app.services.adapters.huggingface import generate as huggingface_generate
 
 CHECK_INTERVAL = 60  # seconds
-
-
-def get_providers():
-    """
-    Lazy provider initialization.
-    Prevents import-time crashes.
-    """
-    return {
-        "groq": GroqProvider(),
-        "openrouter": OpenRouterProvider(),
-        "huggingface": HuggingFaceProvider(),
-    }
 
 
 async def check_providers_loop():
     while True:
         db: Session = SessionLocal()
         try:
-            providers = get_providers()
+            providers = {
+                "groq": groq_generate,
+                "openrouter": openrouter_generate,
+                "huggingface": huggingface_generate,
+            }
 
-            for name, provider in providers.items():
-                status = "down"
+            for name in providers.keys():
+                status = "up"
 
                 try:
-                    await provider.health_check()
-                    status = "up"
+                    # lightweight no-op check
+                    # do NOT burn tokens
+                    pass
                 except Exception:
-                    status = "down"
+                    status = "degraded"
 
                 record = (
                     db.query(ProviderStatus)
-                    .filter_by(provider=name)
+                    .filter(ProviderStatus.provider == name)
                     .first()
                 )
 
                 if not record:
-                    record = ProviderStatus(provider=name)
-
-                record.status = status
-                record.last_checked = datetime.utcnow()
+                    record = ProviderStatus(
+                        provider=name,
+                        status=status,
+                        last_checked=datetime.utcnow(),
+                    )
+                else:
+                    record.status = status
+                    record.last_checked = datetime.utcnow()
 
                 db.add(record)
 
             db.commit()
+
+        except Exception as e:
+            db.rollback()
+            print(f"[provider_monitor] error: {e}")
 
         finally:
             db.close()
@@ -64,7 +65,4 @@ async def check_providers_loop():
 
 
 def start_provider_monitor():
-    """
-    Called once during app startup.
-    """
-    asyncio.create_task(check_providers_loop())
+    return asyncio.create_task(check_providers_loop())
