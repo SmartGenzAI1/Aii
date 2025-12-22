@@ -1,229 +1,278 @@
-Aii Backend
+GenZ AI  Backend Service
 
-    
-
-Aii Backend is a production-ready FastAPI service that routes AI requests across multiple providers (Groq, OpenRouter, HuggingFace, Scraper/Web), applies rate-limits and fallback logic, and exposes a live provider health/status API.
-
-
-Core Responsibilities
-
-Intelligent provider routing & fallback
-
-Per-provider rate-limit enforcement
-
-Provider health tracking (green / orange / red)
-
-Centralized API key management
-
-Status API for frontend dashboards
-
-PostgreSQL persistence (Supabase / Neon compatible)
+      
 
 
 
----
+Overview
 
-High-Level Architecture (Mermaid)
+GenZ AI Backend is a production-ready, multi-provider AI orchestration service built with FastAPI.
+It intelligently routes requests across multiple AI providers (Groq, OpenRouter, HuggingFace, Web Search) while enforcing rate limits, uptime monitoring, fallback routing, and security controls.
 
-> This diagram is auto-rendered by GitHub using Mermaid.
+The backend is designed to be:
 
+Horizontally scalable
 
+Provider-agnostic
 
-flowchart TD
-    Client[Frontend / API Client]
-    API[FastAPI Backend]
-    Router[Provider Router]
-    RateLimiter[Rate Limiter]
-    Groq[Groq Adapters x3]
-    OpenRouter[OpenRouter Adapters x2]
-    HF[HuggingFace Adapter]
-    Scraper[Web Scraper]
-    DB[(PostgreSQL)]
-    StatusAPI[/Status API/]
+Fault tolerant
 
-    Client --> API
-    API --> Router
-    Router --> RateLimiter
-
-    RateLimiter -->|Available| Groq
-    RateLimiter -->|Fallback| OpenRouter
-    RateLimiter -->|Fallback| HF
-    RateLimiter -->|Fallback| Scraper
-
-    Groq --> DB
-    OpenRouter --> DB
-    HF --> DB
-    Scraper --> DB
-
-    DB --> StatusAPI
-    StatusAPI --> Client
-
-
----
-
-Backend Structure
-
-backend/
-└── app/
-    ├── main.py
-    ├── api/
-    │   └── v1/
-    │       ├── provider.py
-    │       ├── status.py
-    │       └── health.py
-    ├── services/
-    │   ├── provider_router.py
-    │   ├── rate_limiter.py
-    │   └── status_tracker.py
-    ├── adapters/
-    │   ├── groq.py
-    │   ├── openrouter.py
-    │   ├── huggingface.py
-    │   └── scraper.py
-    ├── models/
-    │   └── provider_status.py
-    ├── db/
-    │   ├── session.py
-    │   └── base.py
-    └── core/
-        └── config.py
-
-
----
-
-Provider Routing Logic
-
-1. Incoming request hits /api/v1/provider
-
-
-2. provider_router.py:
-
-Checks provider availability
-
-Ensures rate-limit safety (e.g. 49/50 RPM)
-
-Selects best provider
-
-
-
-3. If provider fails or is throttled:
-
-Automatically falls back to next provider
-
-
-
-4. Provider result + latency stored in DB
-
-
-5. Provider status updated
-
+Deployment-ready on Render, Vercel, or containers
 
 
 
 ---
 
-Provider Status System
+Key Capabilities
 
-Each provider is tracked in the database:
+Core AI Platform
 
-Field	Description
+Multi-provider LLM routing
 
-provider	Provider name
-status	green / orange / red
-uptime	Rolling uptime percentage
-last_checked	Last health update
+Automatic provider fallback
+
+Centralized provider usage tracking
+
+Adaptive rate limiting per provider
 
 
-Status API
+Reliability & Status
 
-GET /api/v1/status
+Provider health monitoring
 
-Returns data consumed by the frontend status bar UI (Groq-style vertical bars).
+Uptime percentage tracking
+
+System-level operational status
+
+Frontend-ready status API (Groq-style bars)
+
+
+Security
+
+JWT authentication
+
+Role-based access control (user/admin)
+
+Environment-based secret management
+
+SQL injection & request validation protection
+
+
+Developer Experience
+
+OpenAPI documentation (/docs)
+
+Versioned APIs (/api/v1)
+
+Modular architecture
+
+Clear separation of concerns
+
+
+
+---
+
+Architecture Overview
+
+flowchart TB
+    Client -->|HTTPS| FastAPI
+    FastAPI --> APIv1[API v1 Router]
+
+    APIv1 --> ProviderRouter
+    ProviderRouter -->|Primary| Groq
+    ProviderRouter -->|Fallback| OpenRouter
+    ProviderRouter -->|Fallback| HuggingFace
+    ProviderRouter -->|Search| WebScraper
+
+    ProviderRouter --> UsageTracker
+    ProviderRouter --> CircuitBreaker
+
+    ProviderMonitor --> ProviderStatusDB[(Postgres)]
+    APIv1 --> ProviderStatusDB
+
+
+---
+
+Tech Stack
+
+Layer	Technology
+
+Language	Python 3.11+
+Framework	FastAPI
+Database	PostgreSQL (Supabase)
+ORM	SQLAlchemy 2.x
+Auth	JWT
+Server	Uvicorn
+Hosting	Render
+Docs	OpenAPI / Swagger
+
+
+
+---
+
+Project Structure
+
+backend/app
+├── main.py                 # App entrypoint
+├── api/
+│   └── v1/
+│       ├── chat.py         # AI chat endpoint
+│       ├── status.py       # Provider & system status
+│       ├── system.py       # System health
+│       ├── web_search.py   # Web search endpoint
+│       ├── admin.py        # Admin-only APIs
+│       └── auth.py         # Authentication
+│
+├── services/
+│   ├── provider_router.py  # Core AI routing logic
+│   ├── usage_tracker.py    # Rate & quota enforcement
+│   ├── system_health.py   # Aggregated system health
+│   └── web_scraper.py     # Search scraping
+│
+├── adapters/
+│   ├── groq.py
+│   ├── openrouter.py
+│   ├── huggingface.py
+│   └── base.py
+│
+├── workers/
+│   └── provider_monitor.py # Background health checks
+│
+├── models/
+│   ├── user.py
+│   ├── provider_status.py
+│   ├── provider_usage.py
+│   └── audit_log.py
+│
+├── core/
+│   ├── config.py           # Env configuration
+│   ├── security.py         # JWT & hashing
+│   ├── rate_limit.py       # User rate limiting
+│   ├── circuit_breaker.py  # Provider failover
+│   └── logging.py          # Structured logs
+│
+├── db/
+│   ├── session.py
+│   └── base.py
 
 
 ---
 
 Environment Variables
 
-All secrets are backend-only.
+DATABASE_URL=postgresql+psycopg://user:password@host:5432/db
+JWT_SECRET=your-strong-secret
+JWT_ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=30
 
-DATABASE_URL=postgresql+psycopg://user:pass@host:5432/db
-
-GROQ_API_KEY_1=xxx
-GROQ_API_KEY_2=xxx
-GROQ_API_KEY_3=xxx
-
-OPENROUTER_API_KEY_1=xxx
-OPENROUTER_API_KEY_2=xxx
-
+GROQ_API_KEY=xxx
+OPENROUTER_API_KEY=xxx
 HUGGINGFACE_API_KEY=xxx
 
-Never expose these to the frontend.
+> Important: Never commit .env files to version control.
+
+
 
 
 ---
 
-Running Locally
+API Documentation
 
-cd backend
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-uvicorn app.main:app --reload
+Once running, access:
 
-Docs:
+Swagger UI:
+https://<your-domain>/docs
 
-http://localhost:8000/docs
+OpenAPI JSON:
+https://<your-domain>/openapi.json
+
 
 
 ---
 
-Deployment (Render)
+Status System Design
 
-Web Service
+The backend exposes machine-readable status data only.
 
-Python runtime
+Status Endpoint
+
+GET /api/v1/status
+
+Returns:
+
+Provider name
+
+Status (up, degraded, down)
+
+Uptime percentage
+
+Last checked timestamp
+
+
+The frontend is responsible for:
+
+Vertical bar visualization
+
+Green / orange / red indicators
+
+Human-readable banners
+
+
+This clean separation ensures scalability and flexibility.
+
+
+---
+
+Security Model
+
+JWT authentication on protected routes
+
+Password hashing with bcrypt
+
+SQLAlchemy ORM prevents SQL injection
+
+Provider secrets isolated from client
+
+Admin routes restricted by role
+
+
+
+---
+
+Deployment Notes
+
+Render
+
+Set environment variables in dashboard
+
+Expose port 10000
 
 Start command:
 
 
 uvicorn app.main:app --host 0.0.0.0 --port 10000
 
-Add environment variables in Render dashboard
+Health Checks
 
-Database: Supabase or Neon
-
-
-
----
-
-Production Guarantees
-
-Graceful provider degradation
-
-Zero frontend API key exposure
-
-Automatic DB table creation
-
-No hard provider dependency
-
-Horizontal scaling safe
-
+GET /
+GET /health
 
 
 ---
 
-Roadmap (Backend)
+Production Readiness Checklist
 
-Per-user rate limits
+Versioned APIs
 
-Circuit-breaker logic
+DB migrations supported
 
-Background health checks
+Provider isolation
 
-Cost-aware routing
+Rate limiting enforced
 
-Redis cache (optional)
+Observability hooks present
+
+Zero hardcoded secrets
 
 
 
@@ -231,7 +280,14 @@ Redis cache (optional)
 
 License
 
-MIT — production and commercial use allowed.
+MIT License © GenZ AI
 
 
 ---
+
+Maintainers
+
+Built and maintained by GenZ AI Team
+Designed for scale, reliability, and extensibility.
+
+
