@@ -21,3 +21,19 @@ def web_search_scrape(query: str, limit: int = 5):
         })
 
     return results
+    
+ def web_search_fallback(query: str) -> list[dict]:
+    """
+    Lightweight fallback when scraping fails.
+    Returns minimal structured results.
+    """
+    try:
+        return [
+            {
+                "title": "Search unavailable",
+                "url": None,
+                "snippet": "Fallback search provider not configured."
+            }
+        ]
+    except Exception:
+        return []
