@@ -6,9 +6,9 @@ from sqlalchemy.orm import Session
 
 from app.db.session import SessionLocal
 from app.models.provider_status import ProviderStatus
-from app.services.providers.groq import GroqProvider
-from app.services.providers.openrouter import OpenRouterProvider
-from app.services.providers.huggingface import HuggingFaceProvider
+from app.services.adapters.groq import GroqProvider
+from app.services.adapters.openrouter import OpenRouterProvider
+from app.services.adapters.huggingface import HuggingFaceProvider
 
 
 CHECK_INTERVAL = 60  # seconds
