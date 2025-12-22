@@ -2,38 +2,42 @@
 
 import requests
 from bs4 import BeautifulSoup
+from typing import List, Dict
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 GenZAI Bot"
 }
 
-def web_search_scrape(query: str, limit: int = 5):
+
+def web_search_scrape(query: str, limit: int = 5) -> List[Dict]:
+    """
+    Scrape DuckDuckGo HTML results.
+    """
     url = f"https://duckduckgo.com/html/?q={query}"
     res = requests.get(url, headers=HEADERS, timeout=10)
+    res.raise_for_status()
 
     soup = BeautifulSoup(res.text, "html.parser")
-    results = []
+    results: List[Dict] = []
 
     for r in soup.select(".result__a")[:limit]:
         results.append({
-            "title": r.get_text(),
-            "url": r["href"]
+            "title": r.get_text(strip=True),
+            "url": r.get("href")
         })
 
     return results
-    
- def web_search_fallback(query: str) -> list[dict]:
+
+
+def web_search_fallback(query: str) -> List[Dict]:
     """
-    Lightweight fallback when scraping fails.
-    Returns minimal structured results.
+    Safe fallback if scraping fails.
+    Never raises.
     """
-    try:
-        return [
-            {
-                "title": "Search unavailable",
-                "url": None,
-                "snippet": "Fallback search provider not configured."
-            }
-        ]
-    except Exception:
-        return []
+    return [
+        {
+            "title": "Search unavailable",
+            "url": None,
+            "snippet": "Fallback search provider not configured."
+        }
+    ]
