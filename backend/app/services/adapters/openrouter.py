@@ -1,12 +1,24 @@
 #backend/app/services/adapters/openrouter.py
 
 import httpx
+from app.services.providers.base import BaseProvider
+
+
+class OpenRouterProvider(BaseProvider):
+    name = "openrouter"
+
+    async def health_check(self) -> None:
+        async with httpx.AsyncClient(timeout=10) as client:
+            r = await client.get("https://openrouter.ai")
+            if r.status_code >= 400:
+                raise RuntimeError("OpenRouter unavailable")
+
 
 async def generate(prompt: str, api_key: str):
     headers = {
         "Authorization": f"Bearer {api_key}",
         "HTTP-Referer": "https://genz.ai",
-        "X-Title": "GenZ AI"
+        "X-Title": "GenZ AI",
     }
 
     data = {
