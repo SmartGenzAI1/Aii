@@ -1,7 +1,7 @@
 # backend/app/main.py
 """
 Main FastAPI application with graceful database connection handling.
-FIXED: TrustedHostMiddleware configured properly for Render.
+FIXED: Enable FastAPI docs dashboard
 """
 
 from contextlib import asynccontextmanager
@@ -22,6 +22,7 @@ from app.core.exceptions import global_exception_handler
 from app.services.provider_monitor import start_provider_monitor
 
 import logging
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -70,15 +71,16 @@ async def lifespan(app: FastAPI):
 
 
 # Create FastAPI app with lifespan
+# IMPORTANT: Always enable docs for production - you can disable later if needed
 app = FastAPI(
     title="GenZ AI Backend",
     version="1.0.0",
     description="Multi-provider AI orchestration platform",
     lifespan=lifespan,
-    # Disable automatic docs in production
-    docs_url="/docs" if settings.is_development() else None,
-    redoc_url="/redoc" if settings.is_development() else None,
-    openapi_url="/openapi.json" if settings.is_development() else None,
+    # Enable docs (can be disabled in production later if needed)
+    docs_url="/docs",  # Swagger UI
+    redoc_url="/redoc",  # ReDoc
+    openapi_url="/openapi.json",  # OpenAPI schema
 )
 
 
@@ -102,7 +104,6 @@ trusted_hosts = list(settings.ALLOWED_ORIGINS) + [
 ]
 
 # Add Render domain from environment if available
-import os
 render_external_url = os.getenv("RENDER_EXTERNAL_URL")
 if render_external_url:
     # Extract just the hostname
@@ -171,6 +172,11 @@ async def root():
         "service": "GenZ AI Backend",
         "environment": settings.ENV,
         "version": "1.0.0",
+        "docs": {
+            "swagger": "/docs",
+            "redoc": "/redoc",
+            "openapi": "/openapi.json",
+        },
     }
 
 
