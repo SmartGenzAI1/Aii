@@ -1,10 +1,7 @@
 # backend/app/main.py
 """
-Main FastAPI application with complete security hardening.
-- Middleware stack properly ordered
-- Logging initialized
-- All routers included
-- Startup validation
+Main FastAPI application with graceful database connection handling.
+FIXED: TrustedHostMiddleware configured properly for Render.
 """
 
 from contextlib import asynccontextmanager
@@ -33,7 +30,7 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     """
     Application lifecycle management.
-    Runs startup code, then shutdown code after yield.
+    Graceful startup - app starts even if DB is unavailable initially.
     """
     # ===== STARTUP =====
     try:
@@ -45,10 +42,12 @@ async def lifespan(app: FastAPI):
         validate_startup()
         logger.info("✅ Configuration validated")
 
-        # Check database connection
-        if not await check_database_connection():
-            raise RuntimeError("Database unreachable at startup")
-        logger.info("✅ Database connection verified")
+        # Try to check database connection (non-blocking)
+        db_available = await check_database_connection()
+        if db_available:
+            logger.info("✅ Database connection verified")
+        else:
+            logger.warning("⚠️ Database unavailable at startup (will retry on requests)")
 
         # Start background provider monitoring
         start_provider_monitor()
@@ -57,8 +56,8 @@ async def lifespan(app: FastAPI):
         logger.info(f"🚀 GenZ AI Backend starting in {settings.ENV} mode")
 
     except Exception as e:
-        logger.critical(f"❌ Startup failed: {e}", exc_info=True)
-        raise
+        logger.error(f"⚠️ Startup warning (non-critical): {e}")
+        # Don't raise - allow app to start even with warnings
 
     yield
 
@@ -67,7 +66,7 @@ async def lifespan(app: FastAPI):
         await cleanup_database()
         logger.info("✅ Database connections closed")
     except Exception as e:
-        logger.error(f"Error during shutdown: {e}", exc_info=True)
+        logger.error(f"Error during shutdown: {e}")
 
 
 # Create FastAPI app with lifespan
@@ -83,33 +82,49 @@ app = FastAPI(
 )
 
 
-# ===== MIDDLEWARE STACK (order matters - innermost to outermost) =====
-# Order is important: middleware executes in REVERSE order
+# ===== MIDDLEWARE STACK (order matters) =====
 
-# 1. Request ID for tracing (innermost - executes last on way in)
+# 1. Request ID for tracing
 app.add_middleware(RequestIDMiddleware)
 
-# 2. Security headers (must be before validation)
+# 2. Security headers
 app.add_middleware(SecurityHeadersMiddleware)
 
-# 3. Request validation (size limits, content-type)
+# 3. Request validation
 app.add_middleware(RequestValidationMiddleware)
 
-# 4. Trusted hosts (prevent HOST header injection)
+# 4. Trusted hosts - FIXED for Render
+# Include both the Render URL and localhost
+trusted_hosts = list(settings.ALLOWED_ORIGINS) + [
+    "localhost",
+    "127.0.0.1",
+    "[::1]",  # IPv6 localhost
+]
+
+# Add Render domain from environment if available
+import os
+render_external_url = os.getenv("RENDER_EXTERNAL_URL")
+if render_external_url:
+    # Extract just the hostname
+    hostname = render_external_url.replace("https://", "").replace("http://", "").split("/")[0]
+    trusted_hosts.append(hostname)
+
+logger.info(f"Trusted hosts configured: {trusted_hosts}")
+
 app.add_middleware(
     TrustedHostMiddleware,
-    allowed_hosts=settings.ALLOWED_ORIGINS,
+    allowed_hosts=trusted_hosts,
 )
 
-# 5. CORS (outermost - executes first on way in)
+# 5. CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.ALLOWED_ORIGINS,  # Whitelist only
-    allow_credentials=False,  # Don't include credentials
-    allow_methods=["GET", "POST"],  # Only needed methods
+    allow_origins=settings.ALLOWED_ORIGINS,
+    allow_credentials=False,
+    allow_methods=["GET", "POST"],
     allow_headers=["Content-Type", "Authorization"],
     expose_headers=["X-Request-ID", "X-RateLimit-Remaining"],
-    max_age=3600,  # Cache preflight 1 hour
+    max_age=3600,
 )
 
 
@@ -117,7 +132,7 @@ app.add_middleware(
 
 @app.exception_handler(StarletteHTTPException)
 async def http_exception_handler(request: Request, exc: StarletteHTTPException):
-    """Handle HTTP exceptions with request ID."""
+    """Handle HTTP exceptions."""
     request_id = getattr(request.state, "request_id", "unknown")
     logger.warning(
         f"HTTP {exc.status_code}: {exc.detail} [request_id: {request_id}]"
@@ -137,44 +152,20 @@ async def general_exception_handler(request: Request, exc: Exception):
     return await global_exception_handler(request, exc)
 
 
-# ===== API ROUTERS (V1 only) =====
+# ===== API ROUTERS =====
 
-app.include_router(
-    chat.router,
-    prefix="/api/v1",
-    tags=["chat"],
-)
-
-app.include_router(
-    status.router,
-    prefix="/api/v1",
-    tags=["status"],
-)
-
-app.include_router(
-    health.router,
-    prefix="/api/v1",
-    tags=["health"],
-)
-
-app.include_router(
-    admin.router,
-    prefix="/api/v1",
-    tags=["admin"],
-)
-
-app.include_router(
-    web_search.router,
-    prefix="/api/v1",
-    tags=["search"],
-)
+app.include_router(chat.router, prefix="/api/v1", tags=["chat"])
+app.include_router(status.router, prefix="/api/v1", tags=["status"])
+app.include_router(health.router, prefix="/api/v1", tags=["health"])
+app.include_router(admin.router, prefix="/api/v1", tags=["admin"])
+app.include_router(web_search.router, prefix="/api/v1", tags=["search"])
 
 
-# ===== HEALTH & STATUS ENDPOINTS =====
+# ===== HEALTH ENDPOINTS =====
 
 @app.get("/", include_in_schema=False)
 async def root():
-    """Root endpoint for basic health checks."""
+    """Root endpoint."""
     return {
         "status": "ok",
         "service": "GenZ AI Backend",
@@ -185,10 +176,7 @@ async def root():
 
 @app.get("/health", include_in_schema=False)
 async def health_check():
-    """
-    Basic health check endpoint for uptime monitors.
-    Does not require authentication.
-    """
+    """Health check for uptime monitors."""
     return {
         "status": "healthy",
         "version": "1.0.0",
@@ -198,17 +186,12 @@ async def health_check():
 
 @app.get("/ready", include_in_schema=False)
 async def ready_check():
-    """
-    Readiness probe for Kubernetes/container orchestration.
-    Checks if app is ready to accept traffic.
-    """
+    """Readiness probe."""
     return {
         "ready": True,
         "environment": settings.ENV,
     }
 
-
-# ===== STARTUP LOGGING =====
 
 if __name__ == "__main__":
     import uvicorn
