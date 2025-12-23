@@ -1,3 +1,6 @@
-#backend/app/models/__init__.py
+# backend/app/models/__init__.py
+"""SQLAlchemy models package."""
 
-from app.models.provider_status import ProviderStatus
+from .provider_status import ProviderStatus
+
+__all__ = ["ProviderStatus"]
