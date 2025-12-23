@@ -106,9 +106,9 @@ class AIRouter:
             raise RuntimeError("No Groq keys available")
 
         # Try each key
-        for key in self.groq_keys:
+        for idx, key in enumerate(self.groq_keys):
             try:
-                logger.debug(f"Trying Groq with key: {key[:10]}...")
+                logger.debug(f"Trying Groq key index {idx}...")
                 async for chunk in self.groq_provider.stream(
                     prompt=prompt,
                     model=model,
@@ -117,7 +117,7 @@ class AIRouter:
                     yield chunk
                 return
             except Exception as e:
-                logger.warning(f"Groq failed with key {key[:10]}: {e}")
+                logger.warning(f"Groq failed for key index {idx}: {e}")
                 continue
 
         raise RuntimeError("All Groq keys exhausted")
@@ -128,9 +128,9 @@ class AIRouter:
             raise RuntimeError("No OpenRouter keys available")
 
         # Try each key
-        for key in self.openrouter_keys:
+        for idx, key in enumerate(self.openrouter_keys):
             try:
-                logger.debug(f"Trying OpenRouter with key: {key[:10]}...")
+                logger.debug(f"Trying OpenRouter key index {idx}...")
                 async for chunk in self.openrouter_provider.stream(
                     prompt=prompt,
                     model=model,
@@ -139,7 +139,7 @@ class AIRouter:
                     yield chunk
                 return
             except Exception as e:
-                logger.warning(f"OpenRouter failed with key {key[:10]}: {e}")
+                logger.warning(f"OpenRouter failed for key index {idx}: {e}")
                 continue
 
         raise RuntimeError("All OpenRouter keys exhausted")
