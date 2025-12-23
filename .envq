@@ -1,0 +1,74 @@
+# GenZ AI Backend - Environment Configuration
+# 
+# N
+
+# ===== ENVIRONMENT =====
+ENV=production
+LOG_LEVEL=INFO
+
+# ===== DATABASE =====
+# Format: postgresql+asyncpg://user:password@host:port/database
+DATABASE_URL=postgresql+asyncpg://user:password@localhost:5432/genzai_prod
+
+# ===== SECURITY =====
+# Generate with: python -c "import secrets; print(secrets.token_urlsafe(32))"
+JWT_SECRET=your-very-long-secret-key-min-32-characters-here
+JWT_ALGORITHM=HS256
+JWT_EXPIRATION_HOURS=24
+
+# ===== ADMIN USERS =====
+# Comma-separated list of admin emails
+ADMIN_EMAILS=admin@example.com,owner@example.com
+
+# ===== CORS =====
+# Comma-separated list of allowed origins
+ALLOWED_ORIGINS=https://genzai.app,https://www.genzai.app,http://localhost:3000
+
+# ===== API KEYS - GROQ =====
+# Get keys from: https://console.groq.com/keys
+# You can add multiple keys (key rotation)
+GROQ_API_KEYS=gsk_xxxxxxxxxxxxx,gsk_yyyyyyyyyyyyy,gsk_zzzzzzzzzzzzz
+
+# ===== API KEYS - OPENROUTER =====
+# Get keys from: https://openrouter.ai/keys
+OPENROUTER_API_KEYS=sk-or-xxxxxxxxxxxxx,sk-or-yyyyyyyyyyyyy
+
+# ===== API KEYS - HUGGINGFACE =====
+# Get key from: https://huggingface.co/settings/tokens
+HUGGINGFACE_API_KEY=hf_xxxxxxxxxxxxxxxxxxxxx
+
+# ===== RATE LIMITING =====
+RATE_LIMIT_PER_MINUTE=60
+RATE_LIMIT_WINDOW_SECONDS=60
+USER_DAILY_QUOTA=50
+
+# ===== DATABASE POOLING =====
+DATABASE_POOL_SIZE=20
+DATABASE_POOL_MAX_OVERFLOW=40
+DATABASE_POOL_RECYCLE_SECONDS=3600
+
+# ===== REQUEST LIMITS =====
+MAX_REQUEST_SIZE_BYTES=50000
+REQUEST_TIMEOUT_SECONDS=30
+
+# ===== MODEL CONFIGURATION =====
+GROQ_FAST_MODEL=llama-3.1-8b-instant
+GROQ_BALANCED_MODEL=llama-3.1-70b
+OPENROUTER_SMART_MODEL=openai/gpt-4o-mini
+
+# ===== FEATURE FLAGS =====
+ENABLE_WEB_SEARCH=true
+ENABLE_IMAGE_GENERATION=false
+
+# ===== EMAIL (for future use) =====
+EMAIL_FROM=GenZ AI <noreply@genzai.app>
+EMAIL_SERVER=smtp://your_email:password@smtp.gmail.com:587
+
+# ===== LOGGING & MONITORING =====
+# For Sentry error tracking (optional)
+# SENTRY_DSN=https://xxxxx@xxxxx.ingest.sentry.io/xxxxx
+
+# ===== DEPLOY-SPECIFIC =====
+# Render deployment
+PORT=10000
+RENDER_EXTERNAL_URL=https://your-render-url.onrender.com
