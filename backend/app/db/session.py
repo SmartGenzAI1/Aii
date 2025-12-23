@@ -1,8 +1,7 @@
 # backend/app/db/session.py
-
-# backend/app/db/session.py
 """
-SQLAlchemy async session factory with proper connection pooling.
+SQLAlchemy async session factory with proper AsyncIO pooling.
+CRITICAL FIX: Use AsyncAdaptedQueuePool for async engines, NOT QueuePool
 """
 
 from sqlalchemy.ext.asyncio import (
@@ -10,7 +9,7 @@ from sqlalchemy.ext.asyncio import (
     AsyncSession,
     async_sessionmaker,
 )
-from sqlalchemy.pool import NullPool, QueuePool
+from sqlalchemy.pool import NullPool, AsyncAdaptedQueuePool
 from app.core.config import settings
 import logging
 
@@ -20,6 +19,7 @@ logger = logging.getLogger(__name__)
 def get_engine_kwargs() -> dict:
     """
     Generate engine configuration based on environment.
+    CRITICAL: Use AsyncAdaptedQueuePool, NOT QueuePool with async engines
     """
     kwargs = {
         "echo": settings.is_development(),  # Log SQL in dev
@@ -28,17 +28,14 @@ def get_engine_kwargs() -> dict:
         "pool_size": settings.DATABASE_POOL_SIZE,
         "max_overflow": settings.DATABASE_POOL_MAX_OVERFLOW,
         "pool_recycle": settings.DATABASE_POOL_RECYCLE_SECONDS,
+        "poolclass": AsyncAdaptedQueuePool,  # ✅ CORRECT for async
     }
 
-    # In production, use stricter pooling
+    # In production, add extra connection settings
     if settings.is_production():
-        kwargs["poolclass"] = QueuePool
         kwargs["connect_args"] = {
             "server_settings": {"application_name": "genzai_backend"}
         }
-    else:
-        # In development, allow NullPool for testing
-        kwargs["poolclass"] = QueuePool
 
     return kwargs
 
@@ -68,6 +65,7 @@ async_session_maker = async_sessionmaker(
 async def get_db() -> AsyncSession:
     """
     FastAPI dependency for database session.
+    Properly handles async context.
     
     Usage in endpoints:
         async def my_endpoint(db: AsyncSession = Depends(get_db)):
