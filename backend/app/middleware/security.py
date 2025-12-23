@@ -2,6 +2,7 @@
 """
 Security headers middleware.
 Adds HSTS, X-Frame-Options, Content-Security-Policy, etc.
+FIXED: Use del instead of pop() for MutableHeaders
 """
 
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -35,8 +36,14 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             "geolocation=(), microphone=(), camera=()"
         )
 
-        # Remove server header
-        response.headers.pop("Server", None)
+        # Remove server header (if it exists)
+        # MutableHeaders doesn't have pop(), use del instead
+        try:
+            del response.headers["Server"]
+        except KeyError:
+            pass  # Header doesn't exist, that's fine
+
+        # Set custom server header
         response.headers["Server"] = "GenZ AI"
 
         return response
