@@ -1,8 +1,10 @@
 # backend/app/main.py
-
-# backend/app/main.py
 """
-Main FastAPI application with security hardening.
+Main FastAPI application with complete security hardening.
+- Middleware stack properly ordered
+- Logging initialized
+- All routers included
+- Startup validation
 """
 
 from contextlib import asynccontextmanager
@@ -14,9 +16,11 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.api.v1 import chat, status, health, admin, web_search
 from app.core.config import settings, validate_startup
+from app.core.logging import setup_logging
 from app.db.session import check_database_connection, cleanup_database
 from app.middleware.request_id import RequestIDMiddleware
 from app.middleware.security import SecurityHeadersMiddleware
+from app.middleware.request_validation import RequestValidationMiddleware
 from app.core.exceptions import global_exception_handler
 from app.services.provider_monitor import start_provider_monitor
 
@@ -33,6 +37,10 @@ async def lifespan(app: FastAPI):
     """
     # ===== STARTUP =====
     try:
+        # Initialize logging first
+        setup_logging()
+        logger.info("✅ Logging initialized")
+
         # Validate configuration
         validate_startup()
         logger.info("✅ Configuration validated")
@@ -40,6 +48,7 @@ async def lifespan(app: FastAPI):
         # Check database connection
         if not await check_database_connection():
             raise RuntimeError("Database unreachable at startup")
+        logger.info("✅ Database connection verified")
 
         # Start background provider monitoring
         start_provider_monitor()
@@ -48,7 +57,7 @@ async def lifespan(app: FastAPI):
         logger.info(f"🚀 GenZ AI Backend starting in {settings.ENV} mode")
 
     except Exception as e:
-        logger.critical(f"❌ Startup failed: {e}")
+        logger.critical(f"❌ Startup failed: {e}", exc_info=True)
         raise
 
     yield
@@ -56,12 +65,12 @@ async def lifespan(app: FastAPI):
     # ===== SHUTDOWN =====
     try:
         await cleanup_database()
-        logger.info("✅ Database cleaned up")
+        logger.info("✅ Database connections closed")
     except Exception as e:
-        logger.error(f"Error during shutdown: {e}")
+        logger.error(f"Error during shutdown: {e}", exc_info=True)
 
 
-# Create FastAPI app
+# Create FastAPI app with lifespan
 app = FastAPI(
     title="GenZ AI Backend",
     version="1.0.0",
@@ -74,21 +83,25 @@ app = FastAPI(
 )
 
 
-# ===== MIDDLEWARE STACK (order matters) =====
+# ===== MIDDLEWARE STACK (order matters - innermost to outermost) =====
+# Order is important: middleware executes in REVERSE order
 
-# 1. Request ID for tracing
+# 1. Request ID for tracing (innermost - executes last on way in)
 app.add_middleware(RequestIDMiddleware)
 
-# 2. Security headers
+# 2. Security headers (must be before validation)
 app.add_middleware(SecurityHeadersMiddleware)
 
-# 3. Trusted hosts (prevent HOST header injection)
+# 3. Request validation (size limits, content-type)
+app.add_middleware(RequestValidationMiddleware)
+
+# 4. Trusted hosts (prevent HOST header injection)
 app.add_middleware(
     TrustedHostMiddleware,
     allowed_hosts=settings.ALLOWED_ORIGINS,
 )
 
-# 4. CORS (restrictive)
+# 5. CORS (outermost - executes first on way in)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.ALLOWED_ORIGINS,  # Whitelist only
@@ -104,7 +117,7 @@ app.add_middleware(
 
 @app.exception_handler(StarletteHTTPException)
 async def http_exception_handler(request: Request, exc: StarletteHTTPException):
-    """Handle HTTP exceptions."""
+    """Handle HTTP exceptions with request ID."""
     request_id = getattr(request.state, "request_id", "unknown")
     logger.warning(
         f"HTTP {exc.status_code}: {exc.detail} [request_id: {request_id}]"
@@ -124,42 +137,78 @@ async def general_exception_handler(request: Request, exc: Exception):
     return await global_exception_handler(request, exc)
 
 
-# ===== ROUTERS =====
+# ===== API ROUTERS (V1 only) =====
 
-app.include_router(chat.router, prefix="/api/v1", tags=["chat"])
-app.include_router(status.router, prefix="/api/v1", tags=["status"])
-app.include_router(health.router, prefix="/api/v1", tags=["health"])
-app.include_router(admin.router, prefix="/api/v1", tags=["admin"])
+app.include_router(
+    chat.router,
+    prefix="/api/v1",
+    tags=["chat"],
+)
 
-# Protected route: web search only for authenticated users
-app.include_router(web_search.router, prefix="/api/v1", tags=["search"])
+app.include_router(
+    status.router,
+    prefix="/api/v1",
+    tags=["status"],
+)
+
+app.include_router(
+    health.router,
+    prefix="/api/v1",
+    tags=["health"],
+)
+
+app.include_router(
+    admin.router,
+    prefix="/api/v1",
+    tags=["admin"],
+)
+
+app.include_router(
+    web_search.router,
+    prefix="/api/v1",
+    tags=["search"],
+)
 
 
-# ===== HEALTH ENDPOINTS =====
+# ===== HEALTH & STATUS ENDPOINTS =====
 
 @app.get("/", include_in_schema=False)
 async def root():
-    """Root endpoint for health checks."""
+    """Root endpoint for basic health checks."""
     return {
         "status": "ok",
         "service": "GenZ AI Backend",
         "environment": settings.ENV,
+        "version": "1.0.0",
     }
 
 
 @app.get("/health", include_in_schema=False)
 async def health_check():
     """
-    Basic health check for uptime monitors.
-    Doesn't require authentication.
+    Basic health check endpoint for uptime monitors.
+    Does not require authentication.
     """
     return {
         "status": "healthy",
         "version": "1.0.0",
+        "service": "GenZ AI Backend",
     }
 
 
-# ===== STARTUP LOG =====
+@app.get("/ready", include_in_schema=False)
+async def ready_check():
+    """
+    Readiness probe for Kubernetes/container orchestration.
+    Checks if app is ready to accept traffic.
+    """
+    return {
+        "ready": True,
+        "environment": settings.ENV,
+    }
+
+
+# ===== STARTUP LOGGING =====
 
 if __name__ == "__main__":
     import uvicorn
