@@ -1,7 +1,7 @@
 # backend/app/db/session.py
 """
 SQLAlchemy async session factory with proper AsyncIO pooling.
-CRITICAL FIX: Use AsyncAdaptedQueuePool for async engines, NOT QueuePool
+Fixed for Supabase compatibility - no server_settings parameter.
 """
 
 from sqlalchemy.ext.asyncio import (
@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import (
     AsyncSession,
     async_sessionmaker,
 )
-from sqlalchemy.pool import NullPool, AsyncAdaptedQueuePool
+from sqlalchemy.pool import AsyncAdaptedQueuePool
 from app.core.config import settings
 import logging
 
@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 def get_engine_kwargs() -> dict:
     """
     Generate engine configuration based on environment.
-    CRITICAL: Use AsyncAdaptedQueuePool, NOT QueuePool with async engines
+    CRITICAL: Compatible with Supabase connection pooler.
     """
     kwargs = {
         "echo": settings.is_development(),  # Log SQL in dev
@@ -31,11 +31,13 @@ def get_engine_kwargs() -> dict:
         "poolclass": AsyncAdaptedQueuePool,  # ✅ CORRECT for async
     }
 
-    # In production, add extra connection settings
-    if settings.is_production():
-        kwargs["connect_args"] = {
-            "server_settings": {"application_name": "genzai_backend"}
-        }
+    # Supabase pooler doesn't support server_settings parameter
+    # So we DON'T add it here
+    # If you're using direct PostgreSQL, uncomment below:
+    # if settings.is_production():
+    #     kwargs["connect_args"] = {
+    #         "server_settings": {"application_name": "genzai_backend"}
+    #     }
 
     return kwargs
 
@@ -103,5 +105,8 @@ async def cleanup_database():
     """
     Called on app shutdown to properly close database connections.
     """
-    await engine.dispose()
-    logger.info("✅ Database connections closed")
+    try:
+        await engine.dispose()
+        logger.info("✅ Database connections closed")
+    except Exception as e:
+        logger.error(f"Error closing database: {e}")
