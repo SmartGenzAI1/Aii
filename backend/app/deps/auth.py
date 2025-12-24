@@ -1,8 +1,7 @@
 # backend/app/deps/auth.py
-
 """
 Authentication dependencies.
-Handles JWT verification, user lookup, and quota enforcement.
+FIXED: Admin email check now uses settings.admin_emails property
 """
 
 from datetime import date
@@ -24,39 +23,22 @@ async def get_current_user(
     jwt_payload: dict = Depends(verify_jwt),
     db: AsyncSession = Depends(get_db),
 ) -> User:
-    """
-    Get or create user from JWT payload.
-    Enforces daily quota and resets.
-
-    Args:
-        jwt_payload: Decoded JWT token from verify_jwt
-        db: Async database session
-
-    Returns:
-        User model instance
-
-    Raises:
-        HTTPException 401: If user ID/email invalid
-        HTTPException 429: If daily quota exceeded
-    """
+    """Get or create user from JWT payload."""
 
     user_id = jwt_payload.get("sub")
     email = jwt_payload.get("email")
 
-    # Validate JWT payload
     if not user_id or not email:
         logger.warning("Invalid JWT payload: missing sub or email")
         raise HTTPException(status_code=401, detail="Invalid token")
 
     # ===== LOOKUP OR CREATE USER =====
     try:
-        # Query user by ID
         stmt = select(User).where(User.id == user_id)
         result = await db.execute(stmt)
         user = result.scalar_one_or_none()
 
         if user is None:
-            # Create new user
             logger.info(f"Creating new user: {email}")
             user = User(
                 id=user_id,
@@ -66,10 +48,9 @@ async def get_current_user(
                 last_reset=date.today(),
             )
             db.add(user)
-            await db.flush()  # Get generated fields
+            await db.flush()
             await db.commit()
         else:
-            # User exists, verify email matches
             if user.email != email:
                 logger.warning(
                     f"Email mismatch for user {user_id}: "
@@ -121,18 +102,10 @@ async def get_admin_user(
 ) -> User:
     """
     Verify user is an admin.
-
-    Args:
-        user: Current user from get_current_user
-
-    Returns:
-        User if admin
-
-    Raises:
-        HTTPException 403: If not admin
+    FIXED: Uses settings.admin_emails property (returns list)
     """
-
-    if user.email not in settings.ADMIN_EMAILS:
+    # Use the property which returns a list
+    if user.email not in settings.admin_emails:
         logger.warning(f"Admin access denied for: {user.email}")
         raise HTTPException(status_code=403, detail="Admin access required")
 
