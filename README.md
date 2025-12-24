@@ -1,283 +1,291 @@
-GenZ AI Platform
+
+---
+
+# 🧠 GenZ AI Platform
+
+**Production-Ready Multi-Provider AI Orchestration System**
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Python-3.13-blue" />
-  <img src="https://img.shields.io/badge/FastAPI-0.126-green" />
-  <img src="https://img.shields.io/badge/PostgreSQL-Supabase-blue" />
-  <img src="https://img.shields.io/badge/SQLAlchemy-2.0-red" />
-  <img src="https://img.shields.io/badge/License-MIT-black" />
   <img src="https://img.shields.io/badge/Status-Production%20Ready-brightgreen" />
+  <img src="https://img.shields.io/badge/FastAPI-Async-blue" />
+  <img src="https://img.shields.io/badge/Frontend-Static-lightgrey" />
+  <img src="https://img.shields.io/badge/Database-PostgreSQL-blue" />
+  <img src="https://img.shields.io/badge/License-MIT-black" />
 </p>
 
-🚀 Overview
+---
 
-GenZ AI is a production‑ready, multi‑provider AI orchestration platform designed for reliability, scalability, and strict rate‑limit control.
+## 🚀 Overview
 
-The system intelligently routes requests across multiple AI providers (Groq, OpenRouter, HuggingFace, Web‑Scraping Search) with automatic fallback, provider health monitoring, and user‑level quotas.
+**GenZ AI** is a **high-performance, fault-tolerant AI orchestration platform** designed to intelligently route requests across multiple AI providers with **automatic fallback**, **rate-limit enforcement**, and **live health monitoring**.
 
-This repository contains both backend and frontend, fully separated and deployable independently.
+The platform consists of:
 
+* 🔧 A **FastAPI backend** (secure, scalable, async)
+* 🖥️ A **framework-free static frontend** for transparency and status visualization
 
 ---
 
-🧠 Core Features
+## ✨ Core Features
 
-🔁 Multi‑Provider AI Routing
+### 🔁 Multi-Provider AI Routing
 
-Groq (multiple keys)
+* Groq (multiple API keys, rate-aware)
+* OpenRouter
+* HuggingFace Inference
+* Web Search / Scraping Adapter
 
-OpenRouter (multiple keys)
+### 🧯 Automatic Failover
 
-HuggingFace Inference
+* Provider fallback on:
 
-Web search / scraping adapter
+  * Rate-limit exhaustion
+  * Provider downtime
+  * API failures
+* Health-aware routing logic
 
+### ⏱️ Rate-Limit Enforcement
 
-🧯 Automatic Failover
+* Per-provider internal limits
+* Per-user daily quotas
+* Enforced **before provider execution**
 
-Provider fallback on errors or rate‑limit exhaustion
+### 📊 Live Status System
 
+* Continuous provider health checks
+* Health states:
 
-⏱️ Rate‑Limit Enforcement
+  * 🟢 Healthy
+  * 🟠 Degraded
+  * 🔴 Down
+* Uptime percentage tracking
+* Frontend status bars (Groq-style)
 
-Per‑provider internal limits
+### 🔐 Enterprise-Grade Security
 
-Per‑user daily request caps
-
-
-📊 Live Status System
-
-Provider uptime tracking
-
-Health states (Healthy / Degraded / Down)
-
-Visual bar‑based frontend status page
-
-
-🔐 Secure Authentication
-
-JWT‑based auth
-
-Magic‑link ready (optional)
-
-
-🧱 Scalable Architecture
-
-Adapter‑based provider system
-
-Clean API versioning (/api/v1)
-
-
-🗃️ Database‑Light Design
-
-Chats stored locally in browser
-
-Backend DB stores only users, limits, provider health
-
-
-
-
----
-flowchart TD
-    FE[Frontend<br/>(Vercel)]
-    BE[Backend API<br/>(FastAPI - Render)]
-    DB[(PostgreSQL<br/>(Supabase))]
-
-    FE -->|HTTPS| BE
-
-    subgraph Backend[Backend API Components]
-        PR[Provider Router]
-        RL[Rate Limiter]
-        AUTH[Auth / JWT]
-        ST[Status Tracker]
-
-        PR --> G[Groq Adapter]
-        PR --> OR[OpenRouter Adapter]
-        PR --> HF[HuggingFace Adapter]
-        PR --> WS[Web Search Adapter]
-    end
-
-    BE --> RL
-    BE --> AUTH
-    BE --> ST
-    BE --> PR
-
-    ST --> DB
-    
-🏗️ Architecture
-
-Frontend (Vercel)
-   │
-   │ HTTPS
-   ▼
-Backend API (FastAPI – Render)
-   │
-   ├── Provider Router
-   │     ├── Groq Adapter
-   │     ├── OpenRouter Adapter
-   │     ├── HuggingFace Adapter
-   │     └── Web Search Adapter
-   │
-   ├── Rate Limiter
-   ├── Auth / JWT
-   ├── Status Tracker
-   │
-   ▼
-PostgreSQL (Supabase)
-
+* JWT authentication
+* Provider API key isolation
+* Environment validation on startup
+* Request tracing via `X-Request-ID`
 
 ---
 
-📁 Project Structure
+## 🧠 System Architecture
 
-backend/
-  app/
-    api/v1/
-      chat.py
-      status.py
-      auth.py
-    services/
-      provider_router.py
-      adapters/
-        groq.py
-        openrouter.py
-        huggingface.py
-        websearch.py
-    core/
-      config.py
-      security.py
-    db/
-      session.py
-      models/
-frontend/
-  status.html
-  index.html
-README.md
+```mermaid
+flowchart LR
+    Browser -->|HTTPS| Frontend
+    Frontend -->|Fetch JSON| BackendAPI
+    BackendAPI --> Auth
+    BackendAPI --> RateLimiter
+    RateLimiter --> ProviderRouter
 
+    ProviderRouter --> Groq
+    ProviderRouter --> OpenRouter
+    ProviderRouter --> HuggingFace
+    ProviderRouter --> WebSearch
+
+    BackendAPI --> PostgreSQL
+```
 
 ---
 
-🔑 Environment Variables
+## 🔁 Provider Routing Flow
 
-Backend never exposes provider APIs to users.
-
-DATABASE_URL=
-JWT_SECRET=
-GROQ_API_KEY_1=
-GROQ_API_KEY_2=
-GROQ_API_KEY_3=
-OPENROUTER_API_KEY_1=
-OPENROUTER_API_KEY_2=
-HUGGINGFACE_API_KEY=
-
-
----
-
-📊 Provider Status System
-
-Each provider is continuously monitored and stored in the database:
-
-Healthy → green bar
-
-Degraded → orange bar
-
-Down → red bar
-
-
-Uptime percentage is calculated from historical checks.
-
-API endpoint:
-
-GET /api/v1/status
-
+```mermaid
+sequenceDiagram
+    Client->>FastAPI: Chat Request
+    FastAPI->>RateLimiter: Validate quota
+    RateLimiter->>ProviderRouter: Route request
+    ProviderRouter->>Groq: Try primary
+    Groq-->>ProviderRouter: Rate limit / error
+    ProviderRouter->>OpenRouter: Fallback
+    OpenRouter-->>ProviderRouter: Success
+    ProviderRouter-->>Client: AI response
+```
 
 ---
 
-🧪 Local Development
+## 📁 Project Structure
 
-Backend
+```
+.
+├── backend/
+│   ├── app/
+│   │   ├── api/v1/
+│   │   │   ├── chat.py
+│   │   │   ├── status.py
+│   │   │   ├── health.py
+│   │   │   └── admin.py
+│   │   ├── core/
+│   │   │   ├── config.py
+│   │   │   ├── lifespan.py
+│   │   │   ├── rate_limit.py
+│   │   │   └── exceptions.py
+│   │   ├── services/
+│   │   │   ├── provider_router.py
+│   │   │   ├── provider_monitor.py
+│   │   │   └── providers/
+│   │   ├── middleware/
+│   │   │   └── request_id.py
+│   │   └── main.py
+│   └── requirements.txt
+│
+├── frontend/
+│   ├── index.html
+│   ├── status.html
+│   ├── assets/
+│   │   ├── css/
+│   │   └── js/
+│   └── README.md
+│
+└── README.md
+```
 
+---
+
+## ⚙️ Environment Variables
+
+### Backend Configuration
+
+```env
+DATABASE_URL=postgresql+psycopg://...
+JWT_SECRET=super-secure-random-secret
+
+GROQ_API_KEYS=key1,key2,key3
+OPENROUTER_API_KEYS=key1,key2
+HUGGINGFACE_API_KEY=key
+```
+
+> 🔒 **Provider API keys never reach the frontend**
+
+---
+
+## 📊 Status & Health API
+
+| Endpoint             | Description              |
+| -------------------- | ------------------------ |
+| `GET /api/v1/status` | Provider health & uptime |
+| `GET /api/v1/health` | Backend liveness         |
+
+### Example Response
+
+```json
+[
+  {
+    "provider": "groq",
+    "status": "up",
+    "uptime": 99.82,
+    "last_checked": "2025-01-10T12:10:00Z"
+  }
+]
+```
+
+---
+
+## 🖥️ Frontend Overview
+
+The frontend is a **static, framework-free dashboard** built for:
+
+* ⚡ Near-zero latency
+* 🔐 Minimal attack surface
+* 🌍 CDN-friendly deployment
+* 🧼 Zero vendor lock-in
+
+### Key Capabilities
+
+* Vertical provider status bars
+* Real-time API polling
+* Uptime visualization
+* Read-only transparency view
+
+---
+
+## 🧪 Local Development
+
+### Backend
+
+```bash
 cd backend
 python -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
 uvicorn app.main:app --reload
+```
 
-Frontend
+### Frontend
 
-Open frontend/index.html or status.html directly in browser.
+```bash
+cd frontend
+python -m http.server 8080
+```
 
+Open:
+
+```
+http://localhost:8080/status.html
+```
 
 ---
 
-🚀 Deployment
+## 🚀 Deployment
 
-Backend (Render)
+### Backend
 
-Runtime: Python 3.13
+* Platform: **Render**
+* Runtime: **Python 3.11+**
+* Start Command:
 
-Start Command:
-
-
+```bash
 uvicorn app.main:app --host 0.0.0.0 --port 10000
+```
 
-Database (Supabase)
+### Database
 
-PostgreSQL
+* PostgreSQL (Supabase / Neon)
+* SSL enabled
 
-SSL enabled
+### Frontend
 
-
-Frontend (Vercel)
-
-Static HTML / JS
-
-
-
----
-
-🔒 Security Design
-
-Provider API keys never reach frontend
-
-JWT secrets stored only in backend env
-
-Rate‑limit enforced before provider execution
-
-Automatic provider isolation on failure
-
-
+* Vercel
+* Netlify
+* Cloudflare Pages
+* GitHub Pages
 
 ---
 
-🛣️ Roadmap
+## 📈 Production Readiness
 
-Image generation
-
-Voice input/output
-
-Admin dashboard
-
-Usage analytics
-
-Paid plans
-
-
+* [x] Async FastAPI
+* [x] PostgreSQL
+* [x] Provider failover
+* [x] Rate limiting
+* [x] Health monitoring
+* [x] Secure configuration
+* [x] Clean architecture
+* [x] Zero duplicated logic
 
 ---
 
-📜 License
+## 🛣️ Roadmap
 
-MIT License
-
+* Image generation
+* Voice input/output
+* Admin dashboard
+* Usage analytics
+* Paid plans
 
 ---
 
-👥 Team
+## 📜 License
 
-GenZ AI
+**MIT License © 2025 — GenZ AI**
 
-Built for speed, reliability, and real‑world scale.
+---
 
+## 👥 Team
+
+**GenZ AI**
+Built for **speed**, **reliability**, and **real-world scale**.
 
 ---
