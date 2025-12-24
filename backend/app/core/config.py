@@ -1,8 +1,7 @@
 # backend/app/core/config.py
-
-# backend/app/core/config.py
 """
 Production-grade configuration with validation and security defaults.
+FIXED: All list fields now properly parse from environment variables
 """
 
 from pydantic import Field, field_validator
@@ -33,20 +32,27 @@ class Settings(BaseSettings):
     JWT_EXPIRATION_HOURS: int = Field(default=24)
 
     # ===== API KEYS (Multi-provider support) =====
-    GROQ_API_KEYS: list[str] = Field(default_factory=list)
-    OPENROUTER_API_KEYS: list[str] = Field(default_factory=list)
+    # Store as strings, parse in validators
+    GROQ_API_KEYS: str = Field(
+        default="",
+        description="Comma-separated Groq API keys"
+    )
+    OPENROUTER_API_KEYS: str = Field(
+        default="",
+        description="Comma-separated OpenRouter API keys"
+    )
     HUGGINGFACE_API_KEY: Optional[str] = None
 
     # ===== ADMIN & SECURITY =====
-    ADMIN_EMAILS: list[str] = Field(
-        default_factory=list,
-        description="Email addresses with admin access",
+    ADMIN_EMAILS: str = Field(
+        default="",
+        description="Comma-separated admin emails",
     )
 
     # ===== CORS =====
-    ALLOWED_ORIGINS: list[str] = Field(
-        default_factory=lambda: ["http://localhost:3000"],
-        description="Allowed origins for CORS",
+    ALLOWED_ORIGINS: str = Field(
+        default="http://localhost:3000",
+        description="Comma-separated allowed origins",
     )
 
     # ===== RATE LIMITING =====
@@ -80,8 +86,10 @@ class Settings(BaseSettings):
         env_file=".env",
         env_file_encoding="utf-8",
         case_sensitive=True,
-        extra="ignore",  # Ignore unknown env vars
+        extra="ignore",
     )
+
+    # ===== VALIDATORS =====
 
     @field_validator("JWT_SECRET")
     @classmethod
@@ -91,25 +99,38 @@ class Settings(BaseSettings):
             raise ValueError("JWT_SECRET must be at least 32 characters")
         return v
 
-    @field_validator("ALLOWED_ORIGINS")
-    @classmethod
-    def validate_cors_origins(cls, v: list[str]) -> list[str]:
-        """Validate CORS origins are proper URLs."""
-        if not v:
-            raise ValueError("ALLOWED_ORIGINS cannot be empty")
-        return v
+    # ===== COMPUTED PROPERTIES =====
+    # These parse the string fields into lists at runtime
 
-    @field_validator("GROQ_API_KEYS")
-    @classmethod
-    def validate_groq_keys(cls, v: list[str]) -> list[str]:
-        """Filter out placeholder/empty keys."""
-        return [k for k in v if k and not k.startswith("GROQ_KEY")]
+    @property
+    def groq_api_keys(self) -> list[str]:
+        """Parse GROQ_API_KEYS into list, filtering placeholders."""
+        if not self.GROQ_API_KEYS:
+            return []
+        keys = [k.strip() for k in self.GROQ_API_KEYS.split(",") if k.strip()]
+        return [k for k in keys if k and not k.startswith("GROQ_KEY")]
 
-    @field_validator("OPENROUTER_API_KEYS")
-    @classmethod
-    def validate_openrouter_keys(cls, v: list[str]) -> list[str]:
-        """Filter out placeholder/empty keys."""
-        return [k for k in v if k and not k.startswith("OR_KEY")]
+    @property
+    def openrouter_api_keys(self) -> list[str]:
+        """Parse OPENROUTER_API_KEYS into list, filtering placeholders."""
+        if not self.OPENROUTER_API_KEYS:
+            return []
+        keys = [k.strip() for k in self.OPENROUTER_API_KEYS.split(",") if k.strip()]
+        return [k for k in keys if k and not k.startswith("OR_KEY")]
+
+    @property
+    def admin_emails(self) -> list[str]:
+        """Parse ADMIN_EMAILS into list."""
+        if not self.ADMIN_EMAILS:
+            return []
+        return [email.strip() for email in self.ADMIN_EMAILS.split(",") if email.strip()]
+
+    @property
+    def allowed_origins(self) -> list[str]:
+        """Parse ALLOWED_ORIGINS into list."""
+        if not self.ALLOWED_ORIGINS:
+            return ["http://localhost:3000"]
+        return [origin.strip() for origin in self.ALLOWED_ORIGINS.split(",") if origin.strip()]
 
     def is_production(self) -> bool:
         return self.ENV.lower() == "production"
@@ -121,6 +142,7 @@ class Settings(BaseSettings):
 # Singleton instance
 settings = Settings()
 
+
 # Validate critical settings at startup
 def validate_startup():
     """Called in app startup to verify all critical settings."""
@@ -129,7 +151,7 @@ def validate_startup():
     if not settings.JWT_SECRET:
         errors.append("JWT_SECRET not configured")
 
-    if settings.is_production() and not settings.ALLOWED_ORIGINS:
+    if settings.is_production() and not settings.allowed_origins:
         errors.append("ALLOWED_ORIGINS not configured in production")
 
     if not settings.DATABASE_URL:
