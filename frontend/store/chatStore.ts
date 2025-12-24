@@ -1,7 +1,6 @@
-// frontend/store/chatStore.ts
-"""
-Chat store using Zustand for message and model state management.
-"""
+/**
+ * Chat store using Zustand for message and model state management.
+ */
 
 import { create } from "zustand";
 
@@ -14,7 +13,7 @@ type State = {
   messages: Message[];
   model: "fast" | "balanced" | "smart";
   isStreaming: boolean;
-  
+
   addMessage: (m: Message) => void;
   appendToLast: (text: string) => void;
   setModel: (m: State["model"]) => void;
@@ -43,3 +42,4 @@ export const useChatStore = create<State>((set) => ({
 
   setStreaming: (isStreaming) => set({ isStreaming }),
 }));
+
