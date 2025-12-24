@@ -1,7 +1,7 @@
 # backend/app/main.py
 """
 Main FastAPI application with graceful database connection handling.
-FIXED: Enable FastAPI docs dashboard
+FIXED: CORS and TrustedHost middleware configuration
 """
 
 from contextlib import asynccontextmanager
@@ -29,36 +29,28 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """
-    Application lifecycle management.
-    Graceful startup - app starts even if DB is unavailable initially.
-    """
+    """Application lifecycle management."""
     # ===== STARTUP =====
     try:
-        # Initialize logging first
         setup_logging()
         logger.info("✅ Logging initialized")
 
-        # Validate configuration
         validate_startup()
         logger.info("✅ Configuration validated")
 
-        # Try to check database connection (non-blocking)
         db_available = await check_database_connection()
         if db_available:
             logger.info("✅ Database connection verified")
         else:
-            logger.warning("⚠️ Database unavailable at startup (will retry on requests)")
+            logger.warning("⚠️ Database unavailable at startup")
 
-        # Start background provider monitoring
         start_provider_monitor()
         logger.info("✅ Provider monitor started")
 
         logger.info(f"🚀 GenZ AI Backend starting in {settings.ENV} mode")
 
     except Exception as e:
-        logger.error(f"⚠️ Startup warning (non-critical): {e}")
-        # Don't raise - allow app to start even with warnings
+        logger.error(f"⚠️ Startup warning: {e}")
 
     yield
 
@@ -70,23 +62,20 @@ async def lifespan(app: FastAPI):
         logger.error(f"Error during shutdown: {e}")
 
 
-# Create FastAPI app with lifespan
-# IMPORTANT: Always enable docs for production - you can disable later if needed
 app = FastAPI(
     title="GenZ AI Backend",
     version="1.0.0",
     description="Multi-provider AI orchestration platform",
     lifespan=lifespan,
-    # Enable docs (can be disabled in production later if needed)
-    docs_url="/docs",  # Swagger UI
-    redoc_url="/redoc",  # ReDoc
-    openapi_url="/openapi.json",  # OpenAPI schema
+    docs_url="/docs",
+    redoc_url="/redoc",
+    openapi_url="/openapi.json",
 )
 
 
-# ===== MIDDLEWARE STACK (order matters) =====
+# ===== MIDDLEWARE STACK =====
 
-# 1. Request ID for tracing
+# 1. Request ID
 app.add_middleware(RequestIDMiddleware)
 
 # 2. Security headers
@@ -95,32 +84,36 @@ app.add_middleware(SecurityHeadersMiddleware)
 # 3. Request validation
 app.add_middleware(RequestValidationMiddleware)
 
-# 4. Trusted hosts - FIXED for Render
-# Include both the Render URL and localhost
-trusted_hosts = list(settings.ALLOWED_ORIGINS) + [
-    "localhost",
-    "127.0.0.1",
-    "[::1]",  # IPv6 localhost
-]
+# 4. Trusted hosts - FIXED
+trusted_hosts = ["*"]  # Allow all in development
+if settings.is_production():
+    trusted_hosts = []
+    # Add configured origins
+    for origin in settings.allowed_origins:
+        hostname = origin.replace("https://", "").replace("http://", "").split("/")[0]
+        trusted_hosts.append(hostname)
+    
+    # Add Render domain
+    render_url = os.getenv("RENDER_EXTERNAL_URL")
+    if render_url:
+        hostname = render_url.replace("https://", "").replace("http://", "").split("/")[0]
+        if hostname not in trusted_hosts:
+            trusted_hosts.append(hostname)
+    
+    # Add localhost for health checks
+    trusted_hosts.extend(["localhost", "127.0.0.1"])
 
-# Add Render domain from environment if available
-render_external_url = os.getenv("RENDER_EXTERNAL_URL")
-if render_external_url:
-    # Extract just the hostname
-    hostname = render_external_url.replace("https://", "").replace("http://", "").split("/")[0]
-    trusted_hosts.append(hostname)
-
-logger.info(f"Trusted hosts configured: {trusted_hosts}")
+logger.info(f"Trusted hosts: {trusted_hosts}")
 
 app.add_middleware(
     TrustedHostMiddleware,
     allowed_hosts=trusted_hosts,
 )
 
-# 5. CORS
+# 5. CORS - FIXED to use property
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.ALLOWED_ORIGINS,
+    allow_origins=settings.allowed_origins,  # Now a list via @property
     allow_credentials=False,
     allow_methods=["GET", "POST"],
     allow_headers=["Content-Type", "Authorization"],
@@ -135,9 +128,7 @@ app.add_middleware(
 async def http_exception_handler(request: Request, exc: StarletteHTTPException):
     """Handle HTTP exceptions."""
     request_id = getattr(request.state, "request_id", "unknown")
-    logger.warning(
-        f"HTTP {exc.status_code}: {exc.detail} [request_id: {request_id}]"
-    )
+    logger.warning(f"HTTP {exc.status_code}: {exc.detail} [request_id: {request_id}]")
     return JSONResponse(
         status_code=exc.status_code,
         content={
