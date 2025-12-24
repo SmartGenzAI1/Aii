@@ -78,7 +78,32 @@ Backend DB stores only users, limits, provider health
 
 
 ---
+flowchart TD
+    FE[Frontend<br/>(Vercel)]
+    BE[Backend API<br/>(FastAPI - Render)]
+    DB[(PostgreSQL<br/>(Supabase))]
 
+    FE -->|HTTPS| BE
+
+    subgraph Backend[Backend API Components]
+        PR[Provider Router]
+        RL[Rate Limiter]
+        AUTH[Auth / JWT]
+        ST[Status Tracker]
+
+        PR --> G[Groq Adapter]
+        PR --> OR[OpenRouter Adapter]
+        PR --> HF[HuggingFace Adapter]
+        PR --> WS[Web Search Adapter]
+    end
+
+    BE --> RL
+    BE --> AUTH
+    BE --> ST
+    BE --> PR
+
+    ST --> DB
+    
 🏗️ Architecture
 
 Frontend (Vercel)
