@@ -1,45 +1,48 @@
-/**
- * Chat store using Zustand for message and model state management.
- */
+// ============================================
+// FILE: frontend/store/chatStore.ts
+// Zustand chat state management
+// ============================================
 
 import { create } from "zustand";
 
-type Message = {
+interface Message {
   role: "user" | "assistant";
   content: string;
-};
+}
 
-type State = {
+interface ChatStore {
   messages: Message[];
   model: "fast" | "balanced" | "smart";
   isStreaming: boolean;
-
-  addMessage: (m: Message) => void;
+  
+  addMessage: (message: Message) => void;
   appendToLast: (text: string) => void;
-  setModel: (m: State["model"]) => void;
-  setStreaming: (v: boolean) => void;
-};
+  setModel: (model: "fast" | "balanced" | "smart") => void;
+  setStreaming: (streaming: boolean) => void;
+  resetChat: () => void;
+}
 
-export const useChatStore = create<State>((set) => ({
-  // Initial state
+export const useChatStore = create<ChatStore>((set) => ({
   messages: [],
   model: "fast",
   isStreaming: false,
 
-  // Actions
-  addMessage: (m) =>
-    set((s) => ({ messages: [...s.messages, m] })),
+  addMessage: (message) =>
+    set((state) => ({ messages: [...state.messages, message] })),
 
   appendToLast: (text) =>
-    set((s) => {
-      const last = s.messages[s.messages.length - 1];
-      if (!last) return s;
-      last.content += text;
-      return { messages: [...s.messages] };
+    set((state) => {
+      const messages = [...state.messages];
+      if (messages.length > 0) {
+        messages[messages.length - 1] = {
+          ...messages[messages.length - 1],
+          content: messages[messages.length - 1].content + text,
+        };
+      }
+      return { messages };
     }),
 
   setModel: (model) => set({ model }),
-
   setStreaming: (isStreaming) => set({ isStreaming }),
+  resetChat: () => set({ messages: [], isStreaming: false }),
 }));
-
