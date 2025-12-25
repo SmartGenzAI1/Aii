@@ -1,15 +1,19 @@
-// frontend/store/settingsStore.ts
+// ============================================
+// FILE: frontend/store/settingsStore.ts
+// Zustand settings state management
+// ============================================
 
 import { create } from "zustand";
 
 type Mode = "platform" | "byo";
 
-type State = {
+interface SettingsStore {
   mode: Mode;
-  setMode: (m: Mode) => void;
-};
+  setMode: (mode: Mode) => void;
+}
 
-export const useSettingsStore = create<State>((set) => ({
+export const useSettingsStore = create<SettingsStore>((set) => ({
   mode: "platform",
   setMode: (mode) => set({ mode }),
 }));
+
