@@ -1,114 +1,85 @@
+// ============================================
+// FILE: frontend/components/Chat/Message.tsx
+// Individual message display
+// ============================================
+
 "use client";
 
-/*
-  Message component
-  - Shows sender name
-  - Supports code blocks with copy
-  - Adds feedback buttons for AI
-*/
-
+import { MessageCircle, Copy, Check } from "lucide-react";
 import { useState } from "react";
+import { CodeBlock } from "./CodeBlock";
 
-function extractCodeBlocks(content: string) {
-  const regex = /```([\s\S]*?)```/g;
-  const parts: { type: "text" | "code"; value: string }[] = [];
-
-  let lastIndex = 0;
-  let match;
-
-  while ((match = regex.exec(content)) !== null) {
-    if (match.index > lastIndex) {
-      parts.push({
-        type: "text",
-        value: content.slice(lastIndex, match.index),
-      });
-    }
-
-    parts.push({
-      type: "code",
-      value: match[1].trim(),
-    });
-
-    lastIndex = regex.lastIndex;
-  }
-
-  if (lastIndex < content.length) {
-    parts.push({
-      type: "text",
-      value: content.slice(lastIndex),
-    });
-  }
-
-  return parts;
-}
-
-function CodeBlock({ code }: { code: string }) {
-  function copy() {
-    navigator.clipboard.writeText(code);
-  }
-
-  return (
-    <div className="relative bg-[#0F0F0F] text-white rounded-lg p-3 text-xs my-2">
-      <button
-        onClick={copy}
-        className="absolute top-2 right-2 text-[11px] bg-gray-700 px-2 py-1 rounded"
-      >
-        Copy
-      </button>
-      <pre className="overflow-x-auto whitespace-pre-wrap">
-        {code}
-      </pre>
-    </div>
-  );
-}
-
-export function Message({
-  role,
-  content,
-}: {
+interface MessageProps {
   role: "user" | "assistant";
   content: string;
-}) {
-  const [feedback, setFeedback] = useState<
-    null | "up" | "down"
-  >(null);
+  isLast?: boolean;
+}
 
-  const parts = extractCodeBlocks(content);
+export function Message({ role, content, isLast }: MessageProps) {
+  const [copied, setCopied] = useState(false);
+
+  const copyToClipboard = () => {
+    navigator.clipboard.writeText(content);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  // Parse code blocks
+  const parts = content.split(/```[\w]*\n/);
 
   return (
-    <div className="space-y-1">
-      <div className="text-xs font-semibold text-gray-700">
-        {role === "assistant" ? "GenZ AI" : "You"}
-      </div>
-
-      <div className="text-sm leading-relaxed space-y-2">
-        {parts.map((p, i) =>
-          p.type === "code" ? (
-            <CodeBlock key={i} code={p.value} />
-          ) : (
-            <p key={i} className="whitespace-pre-wrap">
-              {p.value}
-            </p>
-          )
-        )}
-      </div>
-
+    <div className={`flex gap-4 animate-fadeIn ${role === "user" ? "justify-end" : ""}`}>
+      {/* Avatar */}
       {role === "assistant" && (
-        <div className="flex gap-3 text-xs text-gray-500 mt-1">
-          <button
-            onClick={() => setFeedback("up")}
-            className={feedback === "up" ? "text-black" : ""}
-          >
-            👍
-          </button>
-          <button
-            onClick={() => setFeedback("down")}
-            className={feedback === "down" ? "text-black" : ""}
-          >
-            👎
-          </button>
+        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex-shrink-0 flex items-center justify-center">
+          <MessageCircle className="w-4 h-4 text-white" />
         </div>
       )}
+
+      {/* Message Bubble */}
+      <div
+        className={`max-w-xl rounded-xl px-4 py-3 ${
+          role === "user"
+            ? "bg-blue-600 text-white"
+            : "bg-slate-900/80 text-slate-100 border border-blue-500/20"
+        }`}
+      >
+        {parts.length > 1 ? (
+          <div className="space-y-3">
+            {parts.map((part, i) => (
+              <div key={i}>
+                {i > 0 && part.includes("```") ? (
+                  <CodeBlock code={part.split("```")[0]} />
+                ) : (
+                  <p className="text-sm leading-relaxed whitespace-pre-wrap">{part}</p>
+                )}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm leading-relaxed whitespace-pre-wrap">{content}</p>
+        )}
+
+        {/* Actions */}
+        {role === "assistant" && isLast && (
+          <button
+            onClick={copyToClipboard}
+            className="mt-3 flex items-center gap-2 text-xs text-slate-400 hover:text-slate-200 transition-colors"
+          >
+            {copied ? (
+              <>
+                <Check className="w-3 h-3" />
+                Copied!
+              </>
+            ) : (
+              <>
+                <Copy className="w-3 h-3" />
+                Copy
+              </>
+            )}
+          </button>
+        )}
+      </div>
     </div>
   );
 }
