@@ -1,33 +1,39 @@
 // frontend/lib/api.ts
 
-export async function streamChat(
-  prompt: string,
-  model: "fast" | "balanced" | "smart",
-  token: string,
-  onChunk: (text: string) => void
-) {
-  const res = await fetch(
-    `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1/chat`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ prompt, model }),
-    }
-  );
+import { env } from "./env";
 
-  if (!res.ok || !res.body) {
-    throw new Error("AI service unavailable");
+const BACKEND_URL = env("NEXT_PUBLIC_BACKEND_URL");
+
+export async function api(
+  path: string,
+  options?: RequestInit
+): Promise<{
+  ok: boolean;
+  data: any;
+  error: string | null;
+}> {
+  if (!BACKEND_URL) {
+    return {
+      ok: false,
+      data: null,
+      error: "Backend not configured",
+    };
   }
 
-  const reader = res.body.getReader();
-  const decoder = new TextDecoder();
+  try {
+    const response = await fetch(`${BACKEND_URL}${path}`, options);
+    const data = await response.json().catch(() => null);
 
-  while (true) {
-    const { value, done } = await reader.read();
-    if (done) break;
-    onChunk(decoder.decode(value));
+    return {
+      ok: response.ok,
+      data,
+      error: response.ok ? null : "Request failed",
+    };
+  } catch {
+    return {
+      ok: false,
+      data: null,
+      error: "Network error",
+    };
   }
 }
