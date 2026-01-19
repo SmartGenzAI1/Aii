@@ -48,12 +48,21 @@ CREATE OR REPLACE FUNCTION delete_storage_object(bucket TEXT, object TEXT, OUT s
 RETURNS RECORD
 LANGUAGE 'plpgsql'
 SECURITY DEFINER
-AS $$
+AS $
 DECLARE
-  project_url TEXT := 'http://supabase_kong_chatbotui:8000';
-  service_role_key TEXT := 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU'; -- full access needed for http request to storage
+  project_url TEXT := COALESCE(current_setting('app.settings.supabase_url', TRUE), 'http://localhost:54321');
+  service_role_key TEXT := COALESCE(current_setting('app.settings.service_role_key', TRUE), '');
   url TEXT := project_url || '/storage/v1/object/' || bucket || '/' || object;
 BEGIN
+  -- Validate inputs
+  IF bucket IS NULL OR object IS NULL OR bucket = '' OR object = '' THEN
+    RAISE EXCEPTION 'Invalid bucket or object name';
+  END IF;
+
+  IF service_role_key = '' THEN
+    RAISE EXCEPTION 'Service role key not configured';
+  END IF;
+
   SELECT
       INTO status, content
            result.status::INT, result.content::TEXT
@@ -64,7 +73,7 @@ BEGIN
     NULL,
     NULL)::extensions.http_request) AS result;
 END;
-$$;
+$;
 
 -- Function to delete a storage object from a bucket
 CREATE OR REPLACE FUNCTION delete_storage_object_from_bucket(bucket_name TEXT, object_path TEXT, OUT status INT, OUT content TEXT)

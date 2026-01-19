@@ -1,292 +1,273 @@
-# Chatbot UI
+# GenZ AI
 
-The open-source AI chat app for everyone.
+**The Next-Generation AI Chat Platform for Gen Z**
 
-<img src="./public/readme/screenshot.png" alt="Chatbot UI" width="600">
+<p align="center">
+  <img src="frontend/public/LIGHT_BRAND_LOGO.png" alt="GenZ AI" width="200">
+</p>
 
-## Demo
+<p align="center">
+  🚀 Modern AI chat with multi-provider support, real-time failover, and Gen Z-friendly UI
+</p>
 
-View the latest demo [here](https://x.com/mckaywrigley/status/1738273242283151777?s=20).
+---
 
-## Updates
+## 🌟 Overview
 
-Hey everyone! I've heard your feedback and am working hard on a big update.
+GenZ AI is a cutting-edge AI orchestration platform built for the modern generation:
 
-Things like simpler deployment, better backend compatibility, and improved mobile layouts are on their way.
+- 🤖 **Multi-Provider AI Routing** - Groq, OpenRouter, HuggingFace with automatic failover
+- ⚡ **Real-Time Health Monitoring** - Live provider status and uptime tracking
+- 🔒 **Enterprise-Grade Security** - JWT auth, rate limiting, and secure API key management
+- 🎨 **Gen Z UI/UX** - Modern, vibrant interface with AI-powered features
+- 🏗️ **Clean Monorepo Architecture** - Separated frontend and backend for scalability
 
-Be back soon.
+---
 
--- Mckay
+## 📁 Project Structure
 
-## Official Hosted Version
-
-Use Chatbot UI without having to host it yourself!
-
-Find the official hosted version of Chatbot UI [here](https://chatbotui.com).
-
-## Sponsor
-
-If you find Chatbot UI useful, please consider [sponsoring](https://github.com/sponsors/mckaywrigley) me to support my open-source work :)
-
-## Issues
-
-We restrict "Issues" to actual issues related to the codebase.
-
-We're getting excessive amounts of issues that amount to things like feature requests, cloud provider issues, etc.
-
-If you are having issues with things like setup, please refer to the "Help" section in the "Discussions" tab above.
-
-Issues unrelated to the codebase will likely be closed immediately.
-
-## Discussions
-
-We highly encourage you to participate in the "Discussions" tab above!
-
-Discussions are a great place to ask questions, share ideas, and get help.
-
-Odds are if you have a question, someone else has the same question.
-
-## Legacy Code
-
-Chatbot UI was recently updated to its 2.0 version.
-
-The code for 1.0 can be found on the `legacy` branch.
-
-## Updating
-
-In your terminal at the root of your local Chatbot UI repository, run:
-
-```bash
-npm run update
+```
+genz-ai/
+├── frontend/          # Next.js React App
+│   ├── app/          # Next.js App Router
+│   ├── components/   # Reusable UI Components
+│   ├── lib/          # Utility Functions
+│   ├── public/       # Static Assets
+│   └── package.json  # Frontend Dependencies
+│
+├── backend/           # FastAPI Python Server + CLI
+│   ├── main.py       # FastAPI Application Entry Point
+│   ├── app/          # FastAPI Core Application
+│   │   ├── db/       # Database Models & Sessions
+│   │   ├── middleware/# Security & Request Middleware
+│   │   ├── deps/     # Dependencies
+│   │   └── providers/# AI Provider Clients
+│   ├── api/v1/       # API Endpoints
+│   ├── core/         # Configuration & Security
+│   ├── services/     # AI Services & Routing
+│   ├── cli/          # GenZ AI CLI (Python)
+│   │   ├── main.py   # CLI Entry Point
+│   │   └── commands/ # CLI Commands
+│   └── requirements.txt
+│
+└── README.md
 ```
 
-If you run a hosted instance you'll also need to run:
+---
+
+## 🚀 Quick Start
+
+### Prerequisites
+
+- Node.js 18+
+- Python 3.11+
+- Supabase CLI (for local database)
+
+### 1. Clone & Setup
 
 ```bash
-npm run db-push
+git clone https://github.com/your-repo/genz-ai.git
+cd genz-ai
 ```
 
-to apply the latest migrations to your live database.
-
-## Local Quickstart
-
-Follow these steps to get your own Chatbot UI instance running locally.
-
-You can watch the full video tutorial [here](https://www.youtube.com/watch?v=9Qq3-7-HNgw).
-
-### 1. Clone the Repo
+### 2. Backend Setup
 
 ```bash
-git clone https://github.com/mckaywrigley/chatbot-ui.git
+cd backend
+
+# Create virtual environment
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Install Python dependencies
+pip install -r requirements.txt
+
+# Configure environment (copy and edit)
+cp .env.example .env
+# Edit .env with your API keys and database URL
+
+# Run backend server
+uvicorn main:app --reload --port 8000
+
+# Or use the GenZ AI CLI
+python -m backend.cli.main serve --reload --port 8000
 ```
 
-### 2. Install Dependencies
+**Backend runs on:** http://localhost:8000
 
-Open a terminal in the root directory of your local Chatbot UI repository and run:
+### 3. Frontend Setup
 
 ```bash
+cd frontend
+
+# Install dependencies
 npm install
-```
 
-### 3. Install Supabase & Run Locally
-
-#### Why Supabase?
-
-Previously, we used local browser storage to store data. However, this was not a good solution for a few reasons:
-
-- Security issues
-- Limited storage
-- Limits multi-modal use cases
-
-We now use Supabase because it's easy to use, it's open-source, it's Postgres, and it has a free tier for hosted instances.
-
-We will support other providers in the future to give you more options.
-
-#### 1. Install Docker
-
-You will need to install Docker to run Supabase locally. You can download it [here](https://docs.docker.com/get-docker) for free.
-
-#### 2. Install Supabase CLI
-
-**MacOS/Linux**
-
-```bash
-brew install supabase/tap/supabase
-```
-
-**Windows**
-
-```bash
-scoop bucket add supabase https://github.com/supabase/scoop-bucket.git
-scoop install supabase
-```
-
-#### 3. Start Supabase
-
-In your terminal at the root of your local Chatbot UI repository, run:
-
-```bash
-supabase start
-```
-
-### 4. Fill in Secrets
-
-#### 1. Environment Variables
-
-In your terminal at the root of your local Chatbot UI repository, run:
-
-```bash
+# Configure environment
 cp .env.local.example .env.local
+# Add your Supabase URL and keys
+
+# Run frontend
+npm run dev
 ```
 
-Get the required values by running:
+**Frontend runs on:** http://localhost:3000
+
+### 4. Full Development (with Supabase)
 
 ```bash
-supabase status
+# Install Supabase CLI
+# Run full stack with local database
+npm run chat  # From frontend directory
 ```
 
-Note: Use `API URL` from `supabase status` for `NEXT_PUBLIC_SUPABASE_URL`
+---
 
-Now go to your `.env.local` file and fill in the values.
+## 🔧 Backend API
 
-If the environment variable is set, it will disable the input in the user settings.
+### Core Endpoints
 
-#### 2. SQL Setup
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/v1/chat` | POST | AI chat with streaming |
+| `/api/v1/models` | GET | Available AI models |
+| `/api/v1/quota` | GET | User quota info |
+| `/api/v1/status` | GET | Provider health status |
+| `/api/v1/health` | GET | Backend health check |
 
-In the 1st migration file `supabase/migrations/20240108234540_setup.sql` you will need to replace 2 values with the values you got above:
+### Authentication
 
-- `project_url` (line 53): `http://supabase_kong_chatbotui:8000` (default) can remain unchanged if you don't change your `project_id` in the `config.toml` file
-- `service_role_key` (line 54): You got this value from running `supabase status`
+- JWT-based authentication
+- User registration and login
+- Rate limiting per user
+- Daily quota enforcement
 
-This prevents issues with storage files not being deleted properly.
+### GenZ AI CLI
 
-### 5. Install Ollama (optional for local models)
-
-Follow the instructions [here](https://github.com/jmorganca/ollama#macos).
-
-### 6. Run app locally
-
-In your terminal at the root of your local Chatbot UI repository, run:
+The backend includes a production-grade Python CLI:
 
 ```bash
-npm run chat
+cd backend
+
+# Show all commands
+python -m backend.cli.main --help
+
+# Start the server
+python -m backend.cli.main serve --port 8000
+
+# Check backend health
+python -m backend.cli.main health
+
+# Check AI provider status
+python -m backend.cli.main status
+
+# Send a chat message (requires JWT token)
+python -m backend.cli.main chat --token YOUR_JWT_TOKEN "Hello AI!"
+
+# Manage configuration
+python -m backend.cli.main config get host
+python -m backend.cli.main config set host http://localhost:8000
 ```
 
-Your local instance of Chatbot UI should now be running at [http://localhost:3000](http://localhost:3000). Be sure to use a compatible node version (i.e. v18).
+### AI Request Lifecycle
 
-You can view your backend GUI at [http://localhost:54323/project/default/editor](http://localhost:54323/project/default/editor).
+1. **Auth Check** → 2. **Rate Limit** → 3. **Model Resolution** → 4. **Provider Routing** → 5. **Stream Response** → 6. **Quota Update**
 
-## Hosted Quickstart
+---
 
-Follow these steps to get your own Chatbot UI instance running in the cloud.
+## 🎨 Frontend Features
 
-Video tutorial coming soon.
+- **AI-Generated Chat Titles** - Fun, Gen Z-style names for conversations
+- **Vision Mode** - Image input support for compatible models
+- **Modern UI** - Clean, responsive design with smooth animations
+- **Real-Time Chat** - Streaming responses with typing indicators
+- **Multi-Modal Support** - Text, images, and file uploads
 
-### 1. Follow Local Quickstart
+---
 
-Repeat steps 1-4 in "Local Quickstart" above.
+## 🔐 Environment Variables
 
-You will want separate repositories for your local and hosted instances.
+### Backend (.env.backend)
 
-Create a new repository for your hosted instance of Chatbot UI on GitHub and push your code to it.
+```env
+DATABASE_URL=postgresql+psycopg://...
+JWT_SECRET=your-secret-key
+GROQ_API_KEYS=key1,key2,key3
+OPENROUTER_API_KEYS=key1,key2
+HUGGINGFACE_API_KEY=your-key
+```
 
-### 2. Setup Backend with Supabase
+### Frontend (.env.local)
 
-#### 1. Create a new project
+```env
+NEXT_PUBLIC_SUPABASE_URL=your-supabase-url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-service-key
+OPENAI_API_KEY=your-openai-key
+```
 
-Go to [Supabase](https://supabase.com/) and create a new project.
+---
 
-#### 2. Get Project Values
+## 🚀 Deployment
 
-Once you are in the project dashboard, click on the "Project Settings" icon tab on the far bottom left.
-
-Here you will get the values for the following environment variables:
-
-- `Project Ref`: Found in "General settings" as "Reference ID"
-
-- `Project ID`: Found in the URL of your project dashboard (Ex: https://supabase.com/dashboard/project/<YOUR_PROJECT_ID>/settings/general)
-
-While still in "Settings" click on the "API" text tab on the left.
-
-Here you will get the values for the following environment variables:
-
-- `Project URL`: Found in "API Settings" as "Project URL"
-
-- `Anon key`: Found in "Project API keys" as "anon public"
-
-- `Service role key`: Found in "Project API keys" as "service_role" (Reminder: Treat this like a password!)
-
-#### 3. Configure Auth
-
-Next, click on the "Authentication" icon tab on the far left.
-
-In the text tabs, click on "Providers" and make sure "Email" is enabled.
-
-We recommend turning off "Confirm email" for your own personal instance.
-
-#### 4. Connect to Hosted DB
-
-Open up your repository for your hosted instance of Chatbot UI.
-
-In the 1st migration file `supabase/migrations/20240108234540_setup.sql` you will need to replace 2 values with the values you got above:
-
-- `project_url` (line 53): Use the `Project URL` value from above
-- `service_role_key` (line 54): Use the `Service role key` value from above
-
-Now, open a terminal in the root directory of your local Chatbot UI repository. We will execute a few commands here.
-
-Login to Supabase by running:
+### Backend (Recommended: Render)
 
 ```bash
-supabase login
+uvicorn main:app --host 0.0.0.0 --port 10000
 ```
 
-Next, link your project by running the following command with the "Project ID" you got above:
+### Frontend (Recommended: Vercel)
 
 ```bash
-supabase link --project-ref <project-id>
+npm run build
+npm start
 ```
 
-Your project should now be linked.
+### Database
 
-Finally, push your database to Supabase by running:
+- **Production**: Supabase or Neon PostgreSQL
+- **Local Dev**: Supabase CLI
+
+---
+
+## 🧪 Testing
 
 ```bash
-supabase db push
+# Frontend tests
+cd frontend
+npm test
+
+# Backend health check
+curl http://localhost:8000/health
+
+# Or use CLI
+python -m backend.cli.main health
 ```
 
-Your hosted database should now be set up!
+---
 
-### 3. Setup Frontend with Vercel
+## 📊 Monitoring
 
-Go to [Vercel](https://vercel.com/) and create a new project.
+- **Provider Health Dashboard** - Real-time status monitoring
+- **Uptime Tracking** - Historical performance data
+- **Rate Limit Monitoring** - Per-user and per-provider limits
 
-In the setup page, import your GitHub repository for your hosted instance of Chatbot UI. Within the project Settings, in the "Build & Development Settings" section, switch Framework Preset to "Next.js".
+---
 
-In environment variables, add the following from the values you got above:
+## 🤝 Contributing
 
-- `NEXT_PUBLIC_SUPABASE_URL`
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-- `SUPABASE_SERVICE_ROLE_KEY`
-- `NEXT_PUBLIC_OLLAMA_URL` (only needed when using local Ollama models; default: `http://localhost:11434`)
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test thoroughly
+5. Submit a pull request
 
-You can also add API keys as environment variables.
+---
 
-- `OPENAI_API_KEY`
-- `AZURE_OPENAI_API_KEY`
-- `AZURE_OPENAI_ENDPOINT`
-- `AZURE_GPT_45_VISION_NAME`
+## 📜 License
 
-For the full list of environment variables, refer to the '.env.local.example' file. If the environment variables are set for API keys, it will disable the input in the user settings.
+**MIT License** - See LICENSE file for details
 
-Click "Deploy" and wait for your frontend to deploy.
+---
 
-Once deployed, you should be able to use your hosted instance of Chatbot UI via the URL Vercel gives you.
-
-## Contributing
-
-We are working on a guide for contributing.
-
-## Contact
-
-Message Mckay on [Twitter/X](https://twitter.com/mckaywrigley)
+**Built for Gen Z, by Gen Z** 🚀
