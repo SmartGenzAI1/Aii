@@ -124,7 +124,7 @@ export function ConversationTemplates({ onSelectTemplate, children }: Conversati
                 }}
               >
                 <div className="flex-shrink-0">
-                  <IconComponent className="h-6 w-6 text-primary" />
+                  <IconComponent className="size-6 text-primary" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <h4 className="text-sm font-medium text-foreground">
@@ -134,7 +134,7 @@ export function ConversationTemplates({ onSelectTemplate, children }: Conversati
                     {template.description}
                   </p>
                   <p className="text-xs text-muted-foreground mt-2 italic">
-                    "{template.prompt.substring(0, 100)}{template.prompt.length > 100 ? '...' : ''}"
+                    &ldquo;{template.prompt.substring(0, 100)}{template.prompt.length > 100 ? '...' : ''}&rdquo;
                   </p>
                   <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary mt-2">
                     {template.category}
