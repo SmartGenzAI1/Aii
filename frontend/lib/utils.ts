@@ -6,6 +6,21 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
+ * Extract base64 data from a data URL
+ */
+export function getBase64FromDataURL(dataURL: string): string {
+  return dataURL.split(',')[1]
+}
+
+/**
+ * Extract media type from a data URL
+ */
+export function getMediaTypeFromDataURL(dataURL: string): string {
+  const mimeType = dataURL.split(',')[0].split(':')[1].split(';')[0]
+  return mimeType
+}
+
+/**
  * Sanitize error messages to prevent XSS attacks
  * Removes or escapes potentially dangerous characters
  */
@@ -18,14 +33,20 @@ export function sanitizeErrorMessage(message: string): string {
   const withoutHtml = message.replace(/<[^>]*>/g, '')
 
   // Escape special characters that could be used in XSS
-  return withoutHtml
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#x27;')
-    .replace(/\//g, '&#x2F;')
-    .slice(0, 500) // Limit length to prevent extremely long messages
+  // Use a single replace call with a function to handle all replacements
+  const escaped = withoutHtml.replace(/[&<>"'/]/g, (char) => {
+    switch (char) {
+      case '&': return '&amp;'
+      case '<': return '&lt;'
+      case '>': return '&gt;'
+      case '"': return '&quot;'
+      case "'": return '&#x27;'
+      case '/': return '&#x2F;'
+      default: return char
+    }
+  })
+
+  return escaped.slice(0, 500) // Limit length to prevent extremely long messages
 }
 
 /**

@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import (
     AsyncSession,
     async_sessionmaker,
 )
-from sqlalchemy.pool import AsyncAdaptedQueuePool
+# from sqlalchemy.pool import AsyncAdaptedQueuePool  # Not needed for async engine
 from core.config import settings
 import logging
 
@@ -26,12 +26,11 @@ def get_engine_kwargs() -> dict:
     """
     kwargs = {
         "echo": settings.is_development(),  # Log SQL in dev
-        "future": True,
         "pool_pre_ping": True,  # Test connection before use
         "pool_size": settings.DATABASE_POOL_SIZE,
         "max_overflow": settings.DATABASE_POOL_MAX_OVERFLOW,
         "pool_recycle": settings.DATABASE_POOL_RECYCLE_SECONDS,
-        "poolclass": AsyncAdaptedQueuePool,  # ✅ CORRECT for async
+        # Note: poolclass not specified for async engines
     }
 
     # Supabase pooler doesn't support server_settings parameter
