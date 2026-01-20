@@ -1,4 +1,5 @@
 import { checkApiKey, getServerProfile } from "@/lib/server/server-chat-helpers"
+import { createErrorResponse } from "@/lib/utils"
 import { ServerRuntime } from "next"
 import OpenAI from "openai"
 
@@ -8,7 +9,7 @@ export async function GET() {
   try {
     const profile = await getServerProfile()
 
-    checkApiKey(profile.openai_api_key, "OpenAI")
+    checkApiKey(profile.openai_api_key || null, "OpenAI")
 
     const openai = new OpenAI({
       apiKey: profile.openai_api_key || "",
@@ -23,10 +24,6 @@ export async function GET() {
       status: 200
     })
   } catch (error: any) {
-    const errorMessage = error.error?.message || "An unexpected error occurred"
-    const errorCode = error.status || 500
-    return new Response(JSON.stringify({ message: errorMessage }), {
-      status: errorCode
-    })
+    return createErrorResponse(error)
   }
 }

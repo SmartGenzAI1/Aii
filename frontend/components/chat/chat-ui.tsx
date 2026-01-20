@@ -11,7 +11,7 @@ import { convertBlobToBase64 } from "@/lib/blob-to-b64"
 import useHotkey from "@/lib/hooks/use-hotkey"
 import { LLMID, MessageImage } from "@/types"
 import { useParams } from "next/navigation"
-import { FC, useContext, useEffect, useState } from "react"
+import { FC, useCallback, useContext, useEffect, useState } from "react"
 import { ChatHelp } from "./chat-help"
 import { useScroll } from "./chat-hooks/use-scroll"
 import { ChatInput } from "./chat-input"
@@ -57,26 +57,7 @@ export const ChatUI: FC<ChatUIProps> = ({}) => {
 
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    const fetchData = async () => {
-      await fetchMessages()
-      await fetchChat()
-
-      scrollToBottom()
-      setIsAtBottom(true)
-    }
-
-    if (params.chatid) {
-      fetchData().then(() => {
-        handleFocusChatInput()
-        setLoading(false)
-      })
-    } else {
-      setLoading(false)
-    }
-  }, [])
-
-  const fetchMessages = async () => {
+  const fetchMessages = useCallback(async () => {
     const fetchedMessages = await getMessagesByChatId(params.chatid as string)
 
     const imagePromises: Promise<MessageImage>[] = fetchedMessages.flatMap(
@@ -148,9 +129,9 @@ export const ChatUI: FC<ChatUIProps> = ({}) => {
     })
 
     setChatMessages(fetchedChatMessages)
-  }
+  }, [params.chatid, setChatMessages, setChatImages, setChatFileItems, setChatFiles, setUseRetrieval, setShowFilesDisplay])
 
-  const fetchChat = async () => {
+  const fetchChat = useCallback(async () => {
     const chat = await getChatById(params.chatid as string)
     if (!chat) return
 
@@ -179,7 +160,26 @@ export const ChatUI: FC<ChatUIProps> = ({}) => {
       includeWorkspaceInstructions: chat.include_workspace_instructions,
       embeddingsProvider: chat.embeddings_provider as "openai" | "local"
     })
-  }
+  }, [params.chatid, assistants, setSelectedAssistant, setSelectedTools, setSelectedChat, setChatSettings])
+
+  useEffect(() => {
+    const fetchData = async () => {
+      await fetchMessages()
+      await fetchChat()
+
+      scrollToBottom()
+      setIsAtBottom(true)
+    }
+
+    if (params.chatid) {
+      fetchData().then(() => {
+        handleFocusChatInput()
+        setLoading(false)
+      })
+    } else {
+      setLoading(false)
+    }
+  }, [params.chatid, fetchMessages, fetchChat, scrollToBottom, setIsAtBottom, handleFocusChatInput])
 
   if (loading) {
     return <Loading />
