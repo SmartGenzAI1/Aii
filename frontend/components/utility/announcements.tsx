@@ -11,8 +11,27 @@ import { SIDEBAR_ICON_SIZE } from "../sidebar/sidebar-switcher"
 
 interface AnnouncementsProps {}
 
+const defaultAnnouncements: Announcement[] = [
+  {
+    id: "genz-ai-launch",
+    title: "🚀 GenZ AI is Here!",
+    content: "Welcome to the future of AI chats. GenZ AI brings you the most lit conversations with AI models. Stay woke with the latest features!",
+    read: false,
+    link: "/help",
+    date: "2024-01-20"
+  },
+  {
+    id: "new-models",
+    title: "🧠 New AI Models Dropped",
+    content: "We've added fresh AI models to keep your chats popping. Check out the latest Grok, Claude, and GPT vibes!",
+    read: false,
+    link: "",
+    date: "2024-01-18"
+  }
+]
+
 export const Announcements: FC<AnnouncementsProps> = () => {
-  const [announcements, setAnnouncements] = useState<Announcement[]>([])
+  const [announcements, setAnnouncements] = useState<Announcement[]>(defaultAnnouncements)
 
   useEffect(() => {
     // Load announcements from local storage

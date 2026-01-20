@@ -206,7 +206,7 @@ export const ChatInput: FC<ChatInputProps> = ({}) => {
             )}
 
             <div className="text-sm font-bold">
-              Talking to {selectedAssistant.name}
+              💬 Chatting with {selectedAssistant.name} 🤖
             </div>
           </div>
         )}
@@ -248,7 +248,7 @@ export const ChatInput: FC<ChatInputProps> = ({}) => {
           className="ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring text-md flex w-full resize-none rounded-md border-none bg-transparent px-14 py-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 mobile-chat-input"
           placeholder={t(
             // Mobile: Shorter placeholder for small screens
-            `Ask anything...`
+            `What's popping? Ask me anything... 💭`
           )}
           onValueChange={handleInputChange}
           value={userInput}

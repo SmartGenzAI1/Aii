@@ -1,13 +1,13 @@
 # GenZ AI
 
-**The Next-Generation AI Chat Platform for Gen Z**
+**The Ultimate AI Chat Experience for Gen Z 🤖✨**
 
 <p align="center">
   <img src="frontend/public/LIGHT_BRAND_LOGO.png" alt="GenZ AI" width="200">
 </p>
 
 <p align="center">
-  🚀 Modern AI chat with multi-provider support, real-time failover, and Gen Z-friendly UI
+  🔥 Slay the AI game with multi-provider magic, instant failover, and vibes that match your energy
 </p>
 
 ---

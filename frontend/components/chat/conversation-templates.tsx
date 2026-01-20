@@ -24,51 +24,67 @@ interface Template {
 const CONVERSATION_TEMPLATES: Template[] = [
   {
     id: "code-review",
-    name: "Code Review",
-    description: "Get help reviewing and improving code",
-    prompt: "Can you review this code and suggest improvements for performance, readability, and best practices?",
+    name: "🔥 Code Review Vibes",
+    description: "Level up your code with AI feedback",
+    prompt: "Yo, check this code out and drop those fire improvements for performance, readability, and best practices. Make it lit! 💻✨",
     icon: Code,
-    category: "Development"
+    category: "Dev Squad"
   },
   {
     id: "documentation",
-    name: "Write Documentation",
-    description: "Generate comprehensive documentation",
-    prompt: "Please help me write clear, comprehensive documentation for this project/feature. Include setup instructions, API documentation, and usage examples.",
+    name: "📝 Doc Drop",
+    description: "Generate that comprehensive docs",
+    prompt: "Help me create straight fire documentation for this project/feature. Include setup vibes, API deets, and usage examples that actually make sense. 📚🚀",
     icon: FileText,
-    category: "Writing"
+    category: "Creator Mode"
   },
   {
     id: "debug-help",
-    name: "Debug Issue",
-    description: "Get help debugging a problem",
-    prompt: "I'm encountering this issue: [describe your problem]. I've tried [what you've tried]. The error is [error message]. Can you help me debug this?",
+    name: "🐛 Bug Buster",
+    description: "Debug like a boss with AI",
+    prompt: "I'm stuck with this issue: [describe your problem]. I've tried [what you've tried]. The error says [error message]. Help me debug this mess, bestie! 🛠️💪",
     icon: Zap,
-    category: "Development"
+    category: "Dev Squad"
   },
   {
     id: "explain-concept",
-    name: "Explain Concept",
-    description: "Get a clear explanation of a complex topic",
-    prompt: "Can you explain [topic/concept] in simple terms? Please break it down step by step and provide examples.",
+    name: "🧠 Concept Crusher",
+    description: "Break down complex topics easily",
+    prompt: "Explain [topic/concept] in simple, relatable terms? Break it down step by step with real examples that actually click. Make it make sense! 🤯💡",
     icon: Brain,
-    category: "Learning"
+    category: "Learn & Grow"
   },
   {
     id: "brainstorm",
-    name: "Brainstorm Ideas",
-    description: "Generate creative ideas for a project",
-    prompt: "I'm working on [project/idea]. Can you help me brainstorm creative solutions and approaches? Consider different perspectives and innovative ideas.",
+    name: "💡 Idea Storm",
+    description: "Brainstorm creative vibes for your project",
+    prompt: "Working on [project/idea] and need some creative inspo. Help me brainstorm wild solutions and fresh approaches. Think outside the box, get innovative! 🌈🎨",
     icon: Lightbulb,
-    category: "Creative"
+    category: "Creator Mode"
   },
   {
     id: "chat-general",
-    name: "General Chat",
-    description: "Have a natural conversation",
-    prompt: "Hello! I'm here for a general conversation. What's on your mind today?",
+    name: "💬 GenZ Chat",
+    description: "Real talk with AI",
+    prompt: "Hey! Down for a chill convo. What's popping in your world today? Let's keep it 100! 😎✨",
     icon: MessageCircle,
-    category: "Social"
+    category: "Social Squad"
+  },
+  {
+    id: "meme-generator",
+    name: "😂 Meme Master",
+    description: "Create viral memes with AI",
+    prompt: "Create a hilarious meme about [topic]. Make it relatable, funny, and shareable. Include the text and describe the image format! 📸😂",
+    icon: Lightbulb,
+    category: "Fun Zone"
+  },
+  {
+    id: "trend-spotter",
+    name: "📈 Trend Hunter",
+    description: "Stay ahead of the curve",
+    prompt: "What's the latest in [industry/topic]? Give me the tea on emerging trends, what's hot right now, and what's coming next. Keep me woke! 🔥📊",
+    icon: Zap,
+    category: "Trend Alert"
   }
 ]
 
