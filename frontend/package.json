@@ -1,6 +1,29 @@
 {
   "name": "genz-ai",
-  "version": "2.0.0",
+  "version": "1.2.0",
+  "description": "The Ultimate AI Chat Experience for Gen Z - Modern AI chat with multi-provider support, real-time failover, and Gen Z-friendly UI",
+  "author": "SmartGenzAI <support@smartgenzai.com>",
+  "license": "MIT",
+  "keywords": [
+    "ai",
+    "chat",
+    "genz",
+    "openai",
+    "anthropic",
+    "groq",
+    "mistral",
+    "nextjs",
+    "react",
+    "typescript"
+  ],
+  "homepage": "https://genz-ai.com",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/SmartGenzAI1/Aii.git"
+  },
+  "bugs": {
+    "url": "https://github.com/SmartGenzAI1/Aii/issues"
+  },
   "private": true,
   "scripts": {
     "chat": "supabase start && npm run db-types && npm run dev",

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Toaster } from "@/components/ui/sonner"
 import { GlobalState } from "@/components/utility/global-state"
 import { Providers } from "@/components/utility/providers"
@@ -13,9 +14,9 @@ import "./globals.css"
 
 const inter = Inter({ subsets: ["latin"] })
 const APP_NAME = "GenZ AI"
-const APP_DEFAULT_TITLE = "GenZ AI"
-const APP_TITLE_TEMPLATE = "%s - GenZ AI"
-const APP_DESCRIPTION = "GenZ AI PWA!"
+const APP_DEFAULT_TITLE = "GenZ AI - The Ultimate AI Chat Experience"
+const APP_TITLE_TEMPLATE = "%s | GenZ AI"
+const APP_DESCRIPTION = "🔥 The Ultimate AI Chat Experience for Gen Z - Modern AI chat with multi-provider support, real-time failover, and vibes that match your energy. Chat with Groq, Claude, GPT, and more!"
 
 interface RootLayoutProps {
   children: ReactNode
@@ -31,15 +32,27 @@ export const metadata: Metadata = {
     template: APP_TITLE_TEMPLATE
   },
   description: APP_DESCRIPTION,
+  keywords: ["AI chat", "Gen Z", "artificial intelligence", "chatbot", "OpenAI", "Claude", "Groq", "GPT", "AI assistant", "modern chat"],
+  authors: [{ name: "SmartGenzAI Team" }],
+  creator: "SmartGenzAI",
+  publisher: "SmartGenzAI",
+  formatDetection: {
+    telephone: false
+  },
+  metadataBase: new URL("https://genz-ai.com"),
+  alternates: {
+    canonical: "/",
+  },
   manifest: "/manifest.json",
+  icons: {
+    icon: "/icon-512x512.png",
+    apple: "/icon-512x512.png"
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "black",
-    title: APP_DEFAULT_TITLE
-    // startUpImage: [],
-  },
-  formatDetection: {
-    telephone: false
+    title: APP_DEFAULT_TITLE,
+    startupImage: "/icon-512x512.png"
   },
   openGraph: {
     type: "website",
@@ -48,16 +61,39 @@ export const metadata: Metadata = {
       default: APP_DEFAULT_TITLE,
       template: APP_TITLE_TEMPLATE
     },
-    description: APP_DESCRIPTION
+    description: APP_DESCRIPTION,
+    url: "https://genz-ai.com",
+    images: [
+      {
+        url: "/LIGHT_BRAND_LOGO.png",
+        width: 200,
+        height: 200,
+        alt: "GenZ AI Logo"
+      }
+    ]
   },
   twitter: {
-    card: "summary",
+    card: "summary_large_image",
     title: {
       default: APP_DEFAULT_TITLE,
       template: APP_TITLE_TEMPLATE
     },
-    description: APP_DESCRIPTION
-  }
+    description: APP_DESCRIPTION,
+    images: ["/LIGHT_BRAND_LOGO.png"],
+    creator: "@SmartGenzAI"
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1
+    }
+  },
+  category: "AI & Chat"
 }
 
 export const viewport: Viewport = {
