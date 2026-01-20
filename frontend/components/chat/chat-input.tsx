@@ -16,6 +16,7 @@ import { Input } from "../ui/input"
 import { TextareaAutosize } from "../ui/textarea-autosize"
 import { ChatCommandInput } from "./chat-command-input"
 import { ChatFilesDisplay } from "./chat-files-display"
+import { ConversationTemplates } from "./conversation-templates"
 import { useChatHandler } from "./chat-hooks/use-chat-handler"
 import { useChatHistoryHandler } from "./chat-hooks/use-chat-history"
 import { usePromptAndCommand } from "./chat-hooks/use-prompt-and-command"
@@ -236,6 +237,11 @@ export const ChatInput: FC<ChatInputProps> = ({}) => {
             accept={filesToAccept}
           />
         </>
+
+        {/* Conversation Templates */}
+        <div className="absolute bottom-[12px] left-14">
+          <ConversationTemplates onSelectTemplate={(prompt) => handleInputChange(prompt)} />
+        </div>
 
         <TextareaAutosize
           textareaRef={chatInputRef}
