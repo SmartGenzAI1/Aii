@@ -153,6 +153,9 @@ class Settings(BaseSettings):
     def effective_database_url(self) -> str:
         """Get the effective database URL, falling back to SQLite for local development."""
         if self.DATABASE_URL:
+            # Convert PostgreSQL URLs to use asyncpg driver for async operations
+            if self.DATABASE_URL.startswith("postgresql://"):
+                return self.DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
             return self.DATABASE_URL
         else:
             # Fallback to local SQLite database for development/demo mode
