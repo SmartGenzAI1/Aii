@@ -123,7 +123,7 @@ if settings.is_production():
     # Add localhost for health checks
     trusted_hosts.extend(["localhost", "127.0.0.1"])
 
-logger.info(f"Trusted hosts: {trusted_hosts}")
+logger.info(f"Configured {len(trusted_hosts)} trusted hosts")
 
 app.add_middleware(
     TrustedHostMiddleware,

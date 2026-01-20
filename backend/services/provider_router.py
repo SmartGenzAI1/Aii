@@ -90,7 +90,7 @@ async def call_groq(prompt: str, model: str) -> str:
             return res.json()["choices"][0]["message"]["content"]
 
         except Exception as e:
-            logger.warning(f"Groq failed with key {key[:6]}*: {e}")
+            logger.warning(f"Groq API call failed: {str(e)}")
 
     raise RuntimeError("Groq unavailable")
 
