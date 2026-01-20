@@ -1,4 +1,4 @@
-// @ts-nocheck - Suppress module resolution errors in this environment
+// @ts-nocheck
 "use client"
 
 import { Button } from "@/components/ui/button"

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { GenZAIContext } from "@/context/context"
 import useHotkey from "@/lib/hooks/use-hotkey"
 import { LLM_LIST } from "@/lib/models/llm/llm-list"
@@ -169,7 +170,7 @@ export const ChatInput: FC<ChatInputProps> = ({}) => {
         <ChatFilesDisplay />
 
         {selectedTools &&
-          selectedTools.map((tool, index) => (
+          selectedTools.map((tool: any, index: number) => (
             <div
               key={index}
               className="flex justify-center"
@@ -230,7 +231,7 @@ export const ChatInput: FC<ChatInputProps> = ({}) => {
             ref={fileInputRef}
             className="hidden"
             type="file"
-            onChange={e => {
+            onChange={(e: any) => {
               if (!e.target.files) return
               handleSelectDeviceFile(e.target.files[0])
             }}

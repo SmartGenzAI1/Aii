@@ -1,4 +1,4 @@
-// @ts-nocheck - Suppress JSX type errors in this environment
+// @ts-nocheck
 import Loading from "@/app/[locale]/loading"
 import { useChatHandler } from "@/components/chat/chat-hooks/use-chat-handler"
 import { GenZAIContext } from "@/context/context"

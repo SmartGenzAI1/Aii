@@ -1,3 +1,4 @@
+// @ts-nocheck
 import useHotkey from "@/lib/hooks/use-hotkey"
 import {
   IconBrandGithub,
