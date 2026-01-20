@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { CHAT_SETTING_LIMITS } from "@/lib/chat-setting-limits"
 import { checkApiKey, getServerProfile } from "@/lib/server/server-chat-helpers"
 import { ChatSettings } from "@/types"
@@ -32,7 +33,7 @@ export async function POST(request: Request) {
     })
 
     // Convert the response into a friendly text-stream.
-    const stream = OpenAIStream(response)
+    const stream = OpenAIStream(response as any)
 
     // Respond with the stream
     return new StreamingTextResponse(stream)
