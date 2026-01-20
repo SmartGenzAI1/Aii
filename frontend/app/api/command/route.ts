@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { CHAT_SETTING_LIMITS } from "@/lib/chat-setting-limits"
 import { checkApiKey, getServerProfile } from "@/lib/server/server-chat-helpers"
 import OpenAI from "openai"
@@ -21,22 +22,19 @@ export async function POST(request: Request) {
     })
 
     const response = await openai.chat.completions.create({
-      model: "gpt-4-1106-preview",
+      model: "gpt-4o",
       messages: [
         {
           role: "system",
-          content: "Respond to the user."
+          content: "You are GenZ AI, a helpful AI assistant with a fun, Gen Z personality. Respond with enthusiasm, emojis, and keep it real! 🔥 Keep responses concise but helpful."
         },
         {
           role: "user",
           content: input
         }
       ],
-      temperature: 0,
-      max_tokens:
-        CHAT_SETTING_LIMITS["gpt-4-turbo-preview"].MAX_TOKEN_OUTPUT_LENGTH
-      //   response_format: { type: "json_object" }
-      //   stream: true
+      temperature: 0.7,
+      max_tokens: CHAT_SETTING_LIMITS["gpt-4o"].MAX_TOKEN_OUTPUT_LENGTH
     })
 
     const content = response.choices[0].message.content

@@ -55,7 +55,7 @@ export default function HomePage() {
         </Link>
 
         <p className="text-xs text-muted-foreground mt-4">
-          Built for Gen Z, by Gen Z • v1.2.0
+          Built for Gen Z, by Gen Z • v2.1.1
         </p>
       </div>
     </div>

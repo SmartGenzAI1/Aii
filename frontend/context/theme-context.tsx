@@ -19,15 +19,25 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     // Load theme from localStorage on mount
-    const savedTheme = localStorage.getItem("genzai-theme") as Theme
-    if (savedTheme && ["light", "dark", "system"].includes(savedTheme)) {
-      setTheme(savedTheme)
+    try {
+      const savedTheme = localStorage.getItem("genzai-theme") as Theme
+      if (savedTheme && ["light", "dark", "system"].includes(savedTheme)) {
+        setTheme(savedTheme)
+      }
+    } catch (error) {
+      // localStorage not available (SSR or private browsing)
+      console.warn("Unable to access localStorage for theme:", error)
     }
   }, [])
 
   useEffect(() => {
     // Save theme to localStorage
-    localStorage.setItem("genzai-theme", theme)
+    try {
+      localStorage.setItem("genzai-theme", theme)
+    } catch (error) {
+      // localStorage not available
+      console.warn("Unable to save theme to localStorage:", error)
+    }
 
     // Resolve actual theme based on system preference
     const resolveTheme = () => {

@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { Toaster } from "@/components/ui/sonner"
+import { ErrorBoundary } from "@/components/utility/error-boundary"
 import { GlobalState } from "@/components/utility/global-state"
 import { Providers } from "@/components/utility/providers"
 import TranslationsProvider from "@/components/utility/translations-provider"
@@ -136,10 +137,12 @@ export default async function RootLayout({
             locale={locale}
             resources={resources}
           >
-            <Toaster richColors position="top-center" duration={3000} />
-            <div className="bg-background text-foreground flex h-dvh flex-col items-center overflow-x-auto min-h-screen-safe">
-              {session ? <GlobalState>{children}</GlobalState> : children}
-            </div>
+            <ErrorBoundary>
+              <Toaster richColors position="top-center" duration={3000} />
+              <div className="bg-background text-foreground flex h-dvh flex-col items-center overflow-x-auto min-h-screen-safe">
+                {session ? <GlobalState>{children}</GlobalState> : children}
+              </div>
+            </ErrorBoundary>
           </TranslationsProvider>
         </Providers>
       </body>

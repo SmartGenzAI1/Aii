@@ -1,6 +1,7 @@
 // @ts-nocheck
 "use client"
 
+import { lazy, Suspense } from "react"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -11,6 +12,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Lightbulb, Code, FileText, MessageCircle, Zap, Brain } from "@tabler/icons-react"
+import { trackTemplateUsed } from "@/lib/analytics"
 
 interface Template {
   id: string
@@ -118,10 +120,20 @@ export function ConversationTemplates({ onSelectTemplate, children }: Conversati
             return (
               <div
                 key={template.id}
-                className="flex items-start space-x-4 p-4 border rounded-lg hover:bg-accent cursor-pointer transition-colors"
+                className="flex items-start space-x-4 p-4 border rounded-lg hover:bg-accent cursor-pointer transition-colors focus-within:ring-2 focus-within:ring-primary"
                 onClick={() => {
+                  trackTemplateUsed(template.name)
                   onSelectTemplate(template.prompt)
                 }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault()
+                    onSelectTemplate(template.prompt)
+                  }
+                }}
+                tabIndex={0}
+                role="button"
+                aria-label={`Select ${template.name} template`}
               >
                 <div className="flex-shrink-0">
                   <IconComponent className="size-6 text-primary" />
