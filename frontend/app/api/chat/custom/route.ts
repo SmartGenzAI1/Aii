@@ -1,6 +1,7 @@
 import { Database } from "@/supabase/types"
 import { ChatSettings } from "@/types"
 import { createClient } from "@supabase/supabase-js"
+import { createErrorResponse } from "@/lib/utils"
 import { OpenAIStream, StreamingTextResponse } from "ai"
 import { ServerRuntime } from "next"
 import OpenAI from "openai"
@@ -48,19 +49,18 @@ export async function POST(request: Request) {
 
     return new StreamingTextResponse(stream)
   } catch (error: any) {
-    let errorMessage = error.message || "An unexpected error occurred"
-    const errorCode = error.status || 500
+    let sanitizedError = error
 
-    if (errorMessage.toLowerCase().includes("api key not found")) {
-      errorMessage =
-        "Custom API Key not found. Please set it in your profile settings."
-    } else if (errorMessage.toLowerCase().includes("incorrect api key")) {
-      errorMessage =
-        "Custom API Key is incorrect. Please fix it in your profile settings."
+    // Sanitize specific error messages
+    if (error?.message) {
+      let errorMessage = error.message
+      if (errorMessage.toLowerCase().includes("api key not found")) {
+        sanitizedError = { ...error, message: "Custom API Key not found. Please set it in your profile settings." }
+      } else if (errorMessage.toLowerCase().includes("incorrect api key")) {
+        sanitizedError = { ...error, message: "Custom API Key is incorrect. Please fix it in your profile settings." }
+      }
     }
 
-    return new Response(JSON.stringify({ message: errorMessage }), {
-      status: errorCode
-    })
+    return createErrorResponse(sanitizedError)
   }
 }

@@ -1,5 +1,6 @@
 import { checkApiKey, getServerProfile } from "@/lib/server/server-chat-helpers"
 import { ChatSettings } from "@/types"
+import { createErrorResponse } from "@/lib/utils"
 import { GoogleGenerativeAI } from "@google/generative-ai"
 
 export const runtime = "edge"
@@ -46,19 +47,18 @@ export async function POST(request: Request) {
     })
 
   } catch (error: any) {
-    let errorMessage = error.message || "An unexpected error occurred"
-    const errorCode = error.status || 500
+    let sanitizedError = error
 
-    if (errorMessage.toLowerCase().includes("api key not found")) {
-      errorMessage =
-        "Google Gemini API Key not found. Please set it in your profile settings."
-    } else if (errorMessage.toLowerCase().includes("api key not valid")) {
-      errorMessage =
-        "Google Gemini API Key is incorrect. Please fix it in your profile settings."
+    // Sanitize specific error messages
+    if (error?.message) {
+      let errorMessage = error.message
+      if (errorMessage.toLowerCase().includes("api key not found")) {
+        sanitizedError = { ...error, message: "Google Gemini API Key not found. Please set it in your profile settings." }
+      } else if (errorMessage.toLowerCase().includes("api key not valid")) {
+        sanitizedError = { ...error, message: "Google Gemini API Key is incorrect. Please fix it in your profile settings." }
+      }
     }
 
-    return new Response(JSON.stringify({ message: errorMessage }), {
-      status: errorCode
-    })
+    return createErrorResponse(sanitizedError)
   }
 }

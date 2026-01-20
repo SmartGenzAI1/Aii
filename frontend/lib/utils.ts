@@ -1,25 +1,45 @@
-import { clsx, type ClassValue } from "clsx"
+import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export function formatDate(input: string | number | Date): string {
-  const date = new Date(input)
-  return date.toLocaleDateString("en-US", {
-    month: "long",
-    day: "numeric",
-    year: "numeric"
+/**
+ * Sanitize error messages to prevent XSS attacks
+ * Removes or escapes potentially dangerous characters
+ */
+export function sanitizeErrorMessage(message: string): string {
+  if (!message || typeof message !== 'string') {
+    return 'An unexpected error occurred'
+  }
+
+  // Remove HTML tags
+  const withoutHtml = message.replace(/<[^>]*>/g, '')
+
+  // Escape special characters that could be used in XSS
+  return withoutHtml
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;')
+    .replace(/\//g, '&#x2F;')
+    .slice(0, 500) // Limit length to prevent extremely long messages
+}
+
+/**
+ * Safe error response helper for API routes
+ */
+export function createErrorResponse(error: any, defaultMessage = 'An unexpected error occurred') {
+  const errorMessage = sanitizeErrorMessage(
+    error?.error?.message ||
+    error?.message ||
+    defaultMessage
+  )
+  const errorCode = error?.status || error?.code || 500
+
+  return new Response(JSON.stringify({ message: errorMessage }), {
+    status: errorCode
   })
-}
-
-export function getMediaTypeFromDataURL(dataURL: string): string | null {
-  const matches = dataURL.match(/^data:([A-Za-z-+\/]+);base64/)
-  return matches ? matches[1] : null
-}
-
-export function getBase64FromDataURL(dataURL: string): string | null {
-  const matches = dataURL.match(/^data:[A-Za-z-+\/]+;base64,(.*)$/)
-  return matches ? matches[1] : null
 }

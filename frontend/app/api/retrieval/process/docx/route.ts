@@ -4,6 +4,7 @@ import { checkApiKey, getServerProfile } from "@/lib/server/server-chat-helpers"
 import { Database } from "@/supabase/types"
 import { FileItemChunk } from "@/types"
 import { createClient } from "@supabase/supabase-js"
+import { createErrorResponse } from "@/lib/utils"
 import { NextResponse } from "next/server"
 import OpenAI from "openai"
 
@@ -112,10 +113,6 @@ export async function POST(req: Request) {
     })
   } catch (error: any) {
     console.error(error)
-    const errorMessage = error.error?.message || "An unexpected error occurred"
-    const errorCode = error.status || 500
-    return new Response(JSON.stringify({ message: errorMessage }), {
-      status: errorCode
-    })
+    return createErrorResponse(error)
   }
 }
