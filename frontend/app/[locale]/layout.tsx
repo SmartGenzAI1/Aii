@@ -1,6 +1,8 @@
 // @ts-nocheck
 import { Toaster } from "@/components/ui/sonner"
 import { ErrorBoundary } from "@/components/utility/error-boundary"
+import { NotificationManager } from "@/components/utility/notifications"
+import { QueryProvider } from "@/components/utility/query-provider"
 import { GlobalState } from "@/components/utility/global-state"
 import { Providers } from "@/components/utility/providers"
 import TranslationsProvider from "@/components/utility/translations-provider"
@@ -132,18 +134,21 @@ export default async function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
         <Providers attribute="class" defaultTheme="dark">
-          <TranslationsProvider
-            namespaces={i18nNamespaces}
-            locale={locale}
-            resources={resources}
-          >
-            <ErrorBoundary>
-              <Toaster richColors position="top-center" duration={3000} />
-              <div className="bg-background text-foreground flex h-dvh flex-col items-center overflow-x-auto min-h-screen-safe">
-                {session ? <GlobalState>{children}</GlobalState> : children}
-              </div>
-            </ErrorBoundary>
-          </TranslationsProvider>
+          <QueryProvider>
+            <TranslationsProvider
+              namespaces={i18nNamespaces}
+              locale={locale}
+              resources={resources}
+            >
+              <ErrorBoundary>
+                <NotificationManager />
+                <Toaster richColors position="top-center" duration={3000} />
+                <div className="bg-background text-foreground flex h-dvh flex-col items-center overflow-x-auto min-h-screen-safe">
+                  {session ? <GlobalState>{children}</GlobalState> : children}
+                </div>
+              </ErrorBoundary>
+            </TranslationsProvider>
+          </QueryProvider>
         </Providers>
       </body>
     </html>
