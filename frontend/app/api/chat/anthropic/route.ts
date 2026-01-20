@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
   try {
     const profile = await getServerProfile()
 
-    checkApiKey(profile.anthropic_api_key, "Anthropic")
+    checkApiKey(profile.anthropic_api_key || null, "Anthropic")
 
     let ANTHROPIC_FORMATTED_MESSAGES: any = messages.slice(1)
 
