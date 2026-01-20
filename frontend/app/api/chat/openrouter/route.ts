@@ -17,7 +17,7 @@ export async function POST(request: Request) {
   try {
     const profile = await getServerProfile()
 
-    checkApiKey(profile.openrouter_api_key, "OpenRouter")
+    checkApiKey(profile.openrouter_api_key || null, "OpenRouter")
 
     const openai = new OpenAI({
       apiKey: profile.openrouter_api_key || "",

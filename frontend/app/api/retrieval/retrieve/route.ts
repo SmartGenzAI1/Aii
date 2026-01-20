@@ -26,9 +26,9 @@ export async function POST(request: Request) {
 
     if (embeddingsProvider === "openai") {
       if (profile.use_azure_openai) {
-        checkApiKey(profile.azure_openai_api_key, "Azure OpenAI")
+        checkApiKey(profile.azure_openai_api_key || null, "Azure OpenAI")
       } else {
-        checkApiKey(profile.openai_api_key, "OpenAI")
+        checkApiKey(profile.openai_api_key || null, "OpenAI")
       }
     }
 

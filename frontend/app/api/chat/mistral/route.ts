@@ -16,7 +16,7 @@ export async function POST(request: Request) {
   try {
     const profile = await getServerProfile()
 
-    checkApiKey(profile.mistral_api_key, "Mistral")
+    checkApiKey(profile.mistral_api_key || null, "Mistral")
 
     // Mistral is compatible the OpenAI SDK
     const mistral = new OpenAI({

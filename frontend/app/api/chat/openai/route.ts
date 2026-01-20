@@ -70,13 +70,13 @@ export async function POST(request: Request) {
     const profile = await getServerProfile()
 
     // Enhanced API key validation
-    if (!validateApiKey(profile.openai_api_key, 'openai')) {
+    if (!validateApiKey(profile.openai_api_key || null, 'openai')) {
       return new Response(JSON.stringify({
         message: "OpenAI API Key is invalid. Please check your profile settings."
       }), { status: 400 })
     }
 
-    checkApiKey(profile.openai_api_key, "OpenAI")
+    checkApiKey(profile.openai_api_key || null, "OpenAI")
 
     const openai = new OpenAI({
       apiKey: profile.openai_api_key || "",

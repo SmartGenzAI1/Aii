@@ -15,7 +15,7 @@ export async function POST(request: Request) {
   try {
     const profile = await getServerProfile()
 
-    checkApiKey(profile.perplexity_api_key, "Perplexity")
+    checkApiKey(profile.perplexity_api_key || null, "Perplexity")
 
     // Perplexity is compatible the OpenAI SDK
     const perplexity = new OpenAI({

@@ -15,7 +15,7 @@ export async function POST(request: Request) {
   try {
     const profile = await getServerProfile()
 
-    checkApiKey(profile.groq_api_key, "G")
+    checkApiKey(profile.groq_api_key || null, "Groq")
 
     // Groq is compatible with the OpenAI SDK
     const groq = new OpenAI({
