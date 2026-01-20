@@ -2,6 +2,7 @@
 import Loading from "@/app/[locale]/loading"
 import { useChatHandler } from "@/components/chat/chat-hooks/use-chat-handler"
 import { GenZAIContext } from "@/context/context"
+import { ThemeToggle } from "@/components/ui/theme-toggle"
 import { getAssistantToolsByAssistantId } from "@/db/assistant-tools"
 import { getChatFilesByChatId } from "@/db/chat-files"
 import { getChatById } from "@/db/chats"
@@ -209,6 +210,7 @@ export const ChatUI: FC<ChatUIProps> = ({}) => {
 
         {/* Mobile: Secondary buttons in header */}
         <div className="flex items-center space-x-2 md:hidden">
+          <ThemeToggle />
           <ChatSecondaryButtons />
         </div>
       </div>
@@ -225,6 +227,7 @@ export const ChatUI: FC<ChatUIProps> = ({}) => {
       </div>
 
       <div className="absolute right-4 top-1 hidden md:flex h-[40px] items-center space-x-2">
+        <ThemeToggle />
         <ChatSecondaryButtons />
       </div>
 
