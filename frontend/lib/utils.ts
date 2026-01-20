@@ -29,12 +29,10 @@ export function sanitizeErrorMessage(message: string): string {
     return 'An unexpected error occurred'
   }
 
-  // Remove HTML tags
-  const withoutHtml = message.replace(/<[^>]*>/g, '')
-
-  // Escape special characters that could be used in XSS
+  // Escape special characters that could be used in XSS so that any HTML or scripts
+  // are rendered as plain text rather than executed.
   // Use a single replace call with a function to handle all replacements
-  const escaped = withoutHtml.replace(/[&<>"'/]/g, (char) => {
+  const escaped = message.replace(/[&<>"'/]/g, (char) => {
     switch (char) {
       case '&': return '&amp;'
       case '<': return '&lt;'
