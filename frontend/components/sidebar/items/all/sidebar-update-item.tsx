@@ -152,24 +152,6 @@ export const SidebarUpdateItem: FC<SidebarUpdateItemProps> = ({
     Tables<"tools">[]
   >([])
 
-  useEffect(() => {
-    if (isOpen) {
-      const fetchData = async () => {
-        if (workspaces.length > 1) {
-          const workspaces = await fetchSelectedWorkspaces()
-          setStartingWorkspaces(workspaces)
-          setSelectedWorkspaces(workspaces)
-        }
-
-        const fetchDataFunction = fetchDataFunctions[contentType]
-        if (!fetchDataFunction) return
-        await fetchDataFunction(item.id)
-      }
-
-      fetchData()
-    }
-  }, [isOpen])
-
   const renderState = {
     chats: null,
     presets: null,
@@ -270,6 +252,24 @@ export const SidebarUpdateItem: FC<SidebarUpdateItemProps> = ({
 
     return workspaces
   }
+
+  useEffect(() => {
+    if (isOpen) {
+      const fetchData = async () => {
+        if (workspaces.length > 1) {
+          const workspaces = await fetchSelectedWorkspaces()
+          setStartingWorkspaces(workspaces)
+          setSelectedWorkspaces(workspaces)
+        }
+
+        const fetchDataFunction = fetchDataFunctions[contentType]
+        if (!fetchDataFunction) return
+        await fetchDataFunction(item.id)
+      }
+
+      fetchData()
+    }
+  }, [isOpen, contentType, item.id, workspaces.length])
 
   const handleWorkspaceUpdates = async (
     startingWorkspaces: Tables<"workspaces">[],

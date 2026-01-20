@@ -84,7 +84,7 @@ export const ProfileStep: FC<ProfileStepProps> = ({
 
       setLoading(false)
     }, 500),
-    []
+    [onUsernameAvailableChange]
   )
 
   return (
