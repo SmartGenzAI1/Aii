@@ -2,7 +2,7 @@
 "use client"
 
 import { GenZAISVG } from "@/components/icons/genzai-svg"
-import { IconArrowRight, IconSparkles, IconBrain, IconZap } from "@tabler/icons-react"
+import { IconArrowRight, IconSparkles, IconBrain, IconBolt } from "@tabler/icons-react"
 import { useTheme } from "next-themes"
 import Link from "next/link"
 
@@ -36,7 +36,7 @@ export default function HomePage() {
           </div>
 
           <div className="genz-card genz-card-hover flex flex-col items-center p-6 rounded-xl border-0 bg-white/10 backdrop-blur-sm">
-            <IconZap className="size-10 text-blue-400 mb-3 genz-pulse" />
+            <IconBolt className="size-10 text-blue-400 mb-3 genz-pulse" />
             <h3 className="font-bold text-white mb-2 text-lg">Lightning Fast</h3>
             <p className="text-sm text-white/80 text-center">Real-time streaming & failover ⚡</p>
           </div>
@@ -57,7 +57,7 @@ export default function HomePage() {
         </Link>
 
         <p className="text-sm text-white/60 mt-6 genz-text-shine">
-          🔥 Built by Owais Ahmad Dar from Kashmir - Class 12 Student • v1.1.3 🔥
+          🔥 Built by Owais Ahmad Dar from Kashmir - Class 12 Student • v1.1.4 🔥
         </p>
       </div>
     </div>

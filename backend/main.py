@@ -36,6 +36,7 @@ from app.middleware.request_id import RequestIDMiddleware
 from app.middleware.security import SecurityHeadersMiddleware
 from app.middleware.request_validation import RequestValidationMiddleware
 from core.exceptions import global_exception_handler
+from core.stability_engine import stability_engine
 from services.provider_monitor import start_provider_monitor
 
 import logging
@@ -194,10 +195,26 @@ async def root():
 @app.get("/health", include_in_schema=False)
 async def health_check():
     """Health check for uptime monitors."""
+    health_status = stability_engine.get_health_status()
+
+    # Determine overall health
+    is_healthy = (
+        health_status["error_rate"] < 1.0 and  # Less than 1 error per minute
+        health_status["recovery_success_rate"] > 0.8 and  # >80% recovery success
+        all(cb["state"] != "open" for cb in health_status["circuit_breakers"].values())  # No open circuit breakers
+    )
+
     return {
-        "status": "healthy",
-        "version": "1.0.0",
+        "status": "healthy" if is_healthy else "degraded",
+        "version": "1.1.4",
         "service": "GenZ AI Backend",
+        "uptime": health_status["uptime"],
+        "stability_metrics": {
+            "error_rate": health_status["error_rate"],
+            "recovery_success_rate": health_status["recovery_success_rate"],
+            "active_circuit_breakers": len([cb for cb in health_status["circuit_breakers"].values() if cb["state"] != "closed"]),
+            "recent_errors": health_status["recent_errors"]
+        }
     }
 
 

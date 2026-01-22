@@ -26,10 +26,10 @@ export async function POST(req: Request) {
     const profile = await getServerProfile()
 
     if (embeddingsProvider === "openai") {
-      if (profile.use_azure_openai) {
-        checkApiKey(profile.azure_openai_api_key || null, "Azure OpenAI")
+      if ((profile as any).use_azure_openai) {
+        checkApiKey((profile as any).azure_openai_api_key || null, "Azure OpenAI")
       } else {
-        checkApiKey(profile.openai_api_key || null, "OpenAI")
+        checkApiKey((profile as any).openai_api_key || null, "OpenAI")
       }
     }
 

@@ -6,7 +6,7 @@ GenZ AI Chat API - Production-ready streaming chat endpoint.
 from fastapi import APIRouter, Depends, Request, HTTPException, BackgroundTasks
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import Literal
+from typing import Literal, Dict, List
 
 from core.enhanced_security import (
     get_current_user_secure,
@@ -23,6 +23,7 @@ from services.models import resolve_model
 from services.prompts import sanitize_prompt
 from core.config import settings
 from core.content_filter import content_filter
+from core.stability_engine import stability_engine
 from app.db.models import User
 import logging
 import time
@@ -246,8 +247,22 @@ async def chat(  # CRITICAL SECURITY: Zero Trust Implementation
             provider=provider,
         )
 
-        # Return streaming response (GenZ adaptation will be added in future enhancement)
-        return stream_response(base_stream_generator)
+        # Execute with stability protection
+        async def execute_ai_stream():
+            return stream_response(base_stream_generator)
+
+        async def fallback_response():
+            # Return a helpful fallback message
+            async def fallback_generator():
+                yield f"Sorry {user_email}, we're experiencing technical difficulties. Please try again in a moment! ✨"
+            return stream_response(fallback_generator())
+
+        return await stability_engine.execute_with_stability(
+            operation=execute_ai_stream,
+            service_name="ai_router",
+            operation_name="chat_stream",
+            fallback=fallback_response
+        )
 
     except ValueError as e:
         logger.warning(f"AI provider configuration error: {e}")
@@ -359,3 +374,47 @@ async def list_models(
             "health_monitoring": True,
         }
     }
+
+
+@router.get("/stability", summary="Get system stability status")
+async def get_stability_status(
+    auth_data: dict = Depends(get_current_user_secure),
+):
+    """
+    Get system stability and health metrics.
+    """
+    health_status = stability_engine.get_health_status()
+    error_summary = stability_engine.get_error_summary()
+
+    return {
+        "version": "1.1.4",
+        "health": health_status,
+        "errors": error_summary,
+        "stability_score": min(100, max(0, 100 - (health_status["error_rate"] * 10))),  # 0-100 score
+        "recommendations": _generate_stability_recommendations(health_status, error_summary)
+    }
+
+
+def _generate_stability_recommendations(health_status: Dict, error_summary: Dict) -> List[str]:
+    """Generate stability recommendations based on current status."""
+    recommendations = []
+
+    if health_status["error_rate"] > 2.0:
+        recommendations.append("High error rate detected - consider scaling resources")
+    elif health_status["error_rate"] > 1.0:
+        recommendations.append("Moderate error rate - monitor closely")
+
+    if health_status["recovery_success_rate"] < 0.7:
+        recommendations.append("Low recovery success rate - review error handling strategies")
+
+    open_breakers = [name for name, cb in health_status["circuit_breakers"].items() if cb["state"] == "open"]
+    if open_breakers:
+        recommendations.append(f"Services with open circuit breakers: {', '.join(open_breakers)}")
+
+    if error_summary["unresolved_errors"] > 50:
+        recommendations.append("High number of unresolved errors - investigate root causes")
+
+    if not recommendations:
+        recommendations.append("System is operating normally with good stability")
+
+    return recommendations

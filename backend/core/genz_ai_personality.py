@@ -96,36 +96,62 @@ class GenZAIPersonalityEngine:
     ) -> str:
         """
         Adapt AI response to match GenZ personality and conversation context.
+        Includes error recovery and fallback mechanisms.
         """
 
-        # Get or create conversation context
-        context = self.conversation_contexts.get(conversation_id, ConversationContext())
-        context.message_count += 1
-        context.last_interaction = datetime.utcnow()
+        try:
+            # Get or create conversation context
+            context = self.conversation_contexts.get(conversation_id, ConversationContext())
+            context.message_count += 1
+            context.last_interaction = datetime.utcnow()
 
-        # Analyze user message for context
-        user_analysis = self._analyze_user_message(user_message)
-        context.user_mood = user_analysis.get('mood', 'neutral')
-        context.conversation_flow.append(user_analysis.get('intent', 'general'))
+            # Analyze user message for context
+            user_analysis = self._analyze_user_message(user_message)
+            context.user_mood = user_analysis.get('mood', 'neutral')
+            context.conversation_flow.append(user_analysis.get('intent', 'general'))
 
-        # Update topic trends
-        self._update_topic_trends(context, user_message)
+            # Update topic trends
+            self._update_topic_trends(context, user_message)
 
-        # Adapt personality based on context
-        adapted_personality = self._adapt_personality_to_context(context)
+            # Adapt personality based on context
+            adapted_personality = self._adapt_personality_to_context(context)
 
-        # Generate GenZ-enhanced response
-        genz_response = await self._generate_genz_response(
-            base_response,
-            adapted_personality,
-            context,
-            user_analysis
-        )
+            # Generate GenZ-enhanced response
+            genz_response = await self._generate_genz_response(
+                base_response,
+                adapted_personality,
+                context,
+                user_analysis
+            )
 
-        # Store updated context
-        self.conversation_contexts[conversation_id] = context
+            # Store updated context
+            self.conversation_contexts[conversation_id] = context
 
-        return genz_response
+            return genz_response
+
+        except Exception as e:
+            logger.error(f"GenZ personality adaptation failed: {e}")
+            # Fallback to base response with minimal enhancement
+            try:
+                return await self._safe_enhance_response(base_response, user_message)
+            except Exception as fallback_error:
+                logger.error(f"Fallback enhancement also failed: {fallback_error}")
+                return base_response  # Return original response as last resort
+
+    async def _safe_enhance_response(self, base_response: str, user_message: str) -> str:
+        """Safely enhance response with minimal GenZ elements."""
+        try:
+            # Just add a simple emoji enhancement
+            if len(base_response.strip()) > 10:
+                # Add a positive emoji at the end
+                enhanced = base_response.strip()
+                if not enhanced.endswith(('!', '?', '.')):
+                    enhanced += '.'
+                enhanced += ' ✨'
+                return enhanced
+            return base_response
+        except Exception:
+            return base_response
 
     def _analyze_user_message(self, message: str) -> Dict[str, Any]:
         """Analyze user message for mood, intent, and style."""
