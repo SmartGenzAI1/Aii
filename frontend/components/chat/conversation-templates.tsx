@@ -101,7 +101,7 @@ export function ConversationTemplates({ onSelectTemplate, children }: Conversati
       <DialogTrigger asChild>
         {children || (
           <Button variant="outline" size="sm" className="gap-2">
-            <Lightbulb className="h-4 w-4" />
+            <Lightbulb className="size-4" />
             Templates
           </Button>
         )}

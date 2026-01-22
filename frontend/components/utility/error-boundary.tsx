@@ -43,7 +43,7 @@ export class ErrorBoundary extends Component<Props, State> {
           <AlertTriangle className="size-16 text-destructive mb-4" />
           <h2 className="text-2xl font-bold mb-2">Oops! Something went wrong</h2>
           <p className="text-muted-foreground mb-6 max-w-md">
-            We encountered an unexpected error. This has been reported and we're working to fix it.
+            We encountered an unexpected error. This has been reported and we&apos;re working to fix it.
           </p>
           <div className="flex gap-4">
             <Button onClick={this.handleReset} className="gap-2">
