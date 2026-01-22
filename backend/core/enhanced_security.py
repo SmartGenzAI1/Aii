@@ -13,8 +13,14 @@ from jose import jwt, JWTError
 import re
 
 from core.config import settings
-from core.errors import UnauthorizedError, ForbiddenError
+from core.errors import UnauthorizedError
 from core.rate_limit import IPRateLimiter
+
+# Custom ForbiddenError since it's not imported
+class ForbiddenError(Exception):
+    pass
+
+# Database models will be imported as needed
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +49,10 @@ async def verify_jwt_comprehensive(
         raise HTTPException(status_code=401, detail="Missing authorization token")
 
     # 3. Verify JWT signature and claims
+    if not settings.JWT_SECRET:
+        logger.error("JWT_SECRET not configured")
+        raise HTTPException(status_code=500, detail="Server configuration error")
+
     try:
         payload = jwt.decode(
             credentials.credentials,
@@ -80,24 +90,43 @@ async def verify_jwt_comprehensive(
 
     # 7. Get user from database (ensure they still exist)
     from app.db.session import get_db_session
-    from app.db.models import User
+    from sqlalchemy import text
 
     async with get_db_session() as db:
-        user = await db.get(User, user_id)
-        if not user or not user.is_active:
-            logger.warning(f"User not found or inactive: {user_id}")
+        user_result = await db.execute(text("""
+            SELECT id, email, is_active, banned_until
+            FROM profiles
+            WHERE id = :user_id
+        """), {"user_id": user_id})
+
+        user_row = user_result.first()
+        if not user_row:
+            logger.warning(f"User not found: {user_id}")
             raise HTTPException(status_code=401, detail="User not found")
 
-        # 8. Check if user is banned/suspended
-        if hasattr(user, 'banned_until') and user.banned_until and user.banned_until > now_dt:
+        user = {
+            'id': user_row[0],
+            'email': user_row[1],
+            'is_active': user_row[2],
+            'banned_until': user_row[3]
+        }
+
+        # 8. Check if user is active
+        if not user['is_active']:
+            logger.warning(f"User inactive: {user_id}")
+            raise HTTPException(status_code=401, detail="User account inactive")
+
+        # 9. Check if user is banned/suspended
+        if user['banned_until'] and user['banned_until'] > now_dt:
+            logger.warning(f"User banned until {user['banned_until']}: {user_id}")
             raise HTTPException(status_code=403, detail="Account suspended")
 
         # 9. Validate workspace access if workspace_id in request
         workspace_role = None
         if hasattr(request.state, 'workspace_id'):
-            workspace_result = await db.execute("""
+            workspace_result = await db.execute(text("""
                 SELECT validate_workspace_access(:user_id, :workspace_id) as access_info
-            """, {"user_id": user_id, "workspace_id": request.state.workspace_id})
+            """), {"user_id": user_id, "workspace_id": request.state.workspace_id})
 
             access_info = workspace_result.scalar()
             if not access_info or not access_info.get('has_access'):
@@ -291,19 +320,21 @@ async def log_security_event(
 
     # Insert audit log
     from app.db.session import get_db_session
+    from sqlalchemy import text
     async with get_db_session() as db:
-        await db.execute("""
+        await db.execute(text("""
             SELECT audit_log_event(
                 :user_id, :event_type, 'security', NULL, NULL,
                 NULL, :details, :ip_address, :user_agent, NULL
             )
-        """, {
+        """), {
             "user_id": user_id,
             "event_type": event_type,
             "details": sanitized_details,
             "ip_address": ip_address,
             "user_agent": user_agent[:500] if user_agent else None
         })
+        await db.commit()
 
 # =========================================
 # DEPENDENCY INJECTION
@@ -325,7 +356,7 @@ async def require_workspace_access(
     """
     # This would be used as a FastAPI dependency
     # Implementation depends on how you structure your endpoints
-    pass
+    return {"workspace_id": workspace_id, "required_role": required_role}
 
 # =========================================
 # SECURITY MONITORING
@@ -360,20 +391,22 @@ class SecurityMonitor:
 
         # Store in abuse detection table
         from app.db.session import get_db_session
+        from sqlalchemy import text
         async with get_db_session() as db:
-            await db.execute("""
+            await db.execute(text("""
                 INSERT INTO abuse_detection (
                     user_id, ip_address, violation_type, severity, details
                 ) VALUES (
                     :user_id, :ip_address, :violation_type, :severity, :details
                 )
-            """, {
+            """), {
                 "user_id": user_id,
                 "ip_address": request.client.host if request and request.client else None,
                 "violation_type": activity_type,
                 "severity": self._calculate_severity(activity_type, details),
                 "details": details
             })
+            await db.commit()
 
         # TODO: Send alerts to security team
         # TODO: Implement automatic blocking for critical violations
