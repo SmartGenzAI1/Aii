@@ -189,8 +189,8 @@ export const ChatUI: FC<ChatUIProps> = ({}) => {
 
   return (
     <div className="relative flex h-full flex-col items-center">
-      {/* Mobile header with better touch targets */}
-      <div className="bg-secondary flex max-h-[56px] min-h-[56px] w-full items-center justify-between border-b-2 px-4 font-bold md:max-h-[50px] md:min-h-[50px] md:px-0 md:justify-center">
+      {/* GenZ-Enhanced Mobile header with vibrant styling */}
+      <div className="genz-gradient-primary flex max-h-[56px] min-h-[56px] w-full items-center justify-between border-b-2 border-white/20 px-4 font-bold md:max-h-[50px] md:min-h-[50px] md:px-0 md:justify-center shadow-lg">
         {/* Mobile: Show scroll buttons and secondary buttons in header */}
         <div className="flex items-center space-x-2 md:hidden">
           <ChatScrollButtons
@@ -203,8 +203,8 @@ export const ChatUI: FC<ChatUIProps> = ({}) => {
         </div>
 
         <div className="flex-1 text-center">
-          <div className="max-w-[200px] truncate sm:max-w-[400px] md:max-w-[500px] lg:max-w-[600px] xl:max-w-[700px]">
-            {selectedChat?.name || "Chat"}
+          <div className="max-w-[200px] truncate sm:max-w-[400px] md:max-w-[500px] lg:max-w-[600px] xl:max-w-[700px] text-white text-lg genz-text-shine">
+            {selectedChat?.name ? `💫 ${selectedChat.name} ✨` : "🚀 GenZ AI Chat 💫"}
           </div>
         </div>
 

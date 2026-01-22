@@ -10,52 +10,54 @@ export default function HomePage() {
   const { theme } = useTheme()
 
   return (
-    <div className="flex size-full flex-col items-center justify-center p-8">
-      <div className="text-center max-w-2xl">
-        <div className="mb-8">
+    <div className="flex size-full flex-col items-center justify-center p-8 genz-gradient-bg min-h-screen">
+      <div className="text-center max-w-2xl genz-fade-in">
+        <div className="mb-8 genz-bounce-in">
           <GenZAISVG theme={theme === "dark" ? "dark" : "light"} scale={0.25} />
         </div>
 
-        <h1 className="text-5xl font-bold mb-4 bg-gradient-to-r from-blue-500 to-purple-600 bg-clip-text text-transparent">
+        <h1 className="text-6xl font-bold mb-4 genz-text-gradient genz-glow">
           GenZ AI
         </h1>
 
-        <p className="text-xl text-muted-foreground mb-8 leading-relaxed">
-          🔥 The Ultimate AI Chat Experience for Gen Z
+        <p className="text-xl text-white/90 mb-8 leading-relaxed genz-slide-in">
+          🚀 Built by Owais Ahmad Dar from Kashmir - Class 12 Student
           <br />
-          <span className="text-sm">Modern AI chat with multi-provider support, real-time failover, and vibes that match your energy</span>
+          <span className="text-base text-white/70">The Ultimate AI Chat Experience for Gen Z ✨</span>
+          <br />
+          <span className="text-sm text-purple-200">Modern AI chat with multi-provider support, real-time failover, and vibes that match your energy 💫</span>
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="flex flex-col items-center p-4 rounded-lg bg-card border">
-            <IconBrain className="size-8 text-primary mb-2" />
-            <h3 className="font-semibold mb-1">Multi-Provider AI</h3>
-            <p className="text-sm text-muted-foreground text-center">Groq, Claude, GPT & more</p>
+          <div className="genz-card genz-card-hover flex flex-col items-center p-6 rounded-xl border-0 bg-white/10 backdrop-blur-sm">
+            <IconBrain className="size-10 text-purple-400 mb-3 genz-pulse" />
+            <h3 className="font-bold text-white mb-2 text-lg">Multi-Provider AI</h3>
+            <p className="text-sm text-white/80 text-center">Groq, Claude, GPT & more 🤖</p>
           </div>
 
-          <div className="flex flex-col items-center p-4 rounded-lg bg-card border">
-            <IconZap className="size-8 text-primary mb-2" />
-            <h3 className="font-semibold mb-1">Real-Time</h3>
-            <p className="text-sm text-muted-foreground text-center">Instant failover & streaming</p>
+          <div className="genz-card genz-card-hover flex flex-col items-center p-6 rounded-xl border-0 bg-white/10 backdrop-blur-sm">
+            <IconZap className="size-10 text-blue-400 mb-3 genz-pulse" />
+            <h3 className="font-bold text-white mb-2 text-lg">Lightning Fast</h3>
+            <p className="text-sm text-white/80 text-center">Real-time streaming & failover ⚡</p>
           </div>
 
-          <div className="flex flex-col items-center p-4 rounded-lg bg-card border">
-            <IconSparkles className="size-8 text-primary mb-2" />
-            <h3 className="font-semibold mb-1">GenZ Vibes</h3>
-            <p className="text-sm text-muted-foreground text-center">Modern UI that slays</p>
+          <div className="genz-card genz-card-hover flex flex-col items-center p-6 rounded-xl border-0 bg-white/10 backdrop-blur-sm">
+            <IconSparkles className="size-10 text-pink-400 mb-3 genz-pulse" />
+            <h3 className="font-bold text-white mb-2 text-lg">GenZ Built</h3>
+            <p className="text-sm text-white/80 text-center">For the culture, by the culture ✨</p>
           </div>
         </div>
 
         <Link
-          className="inline-flex items-center justify-center rounded-lg bg-gradient-to-r from-blue-500 to-purple-600 px-8 py-3 font-semibold text-white shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105"
+          className="genz-btn-primary inline-flex items-center justify-center px-10 py-4 font-bold text-lg hover:shadow-2xl genz-hover-glow"
           href="/login"
         >
-          Start Chatting 🔥
-          <IconArrowRight className="ml-2" size={20} />
+          Start Chatting Now 🚀
+          <IconArrowRight className="ml-3" size={24} />
         </Link>
 
-        <p className="text-xs text-muted-foreground mt-4">
-          Built for Gen Z, by Gen Z • v2.1.1
+        <p className="text-sm text-white/60 mt-6 genz-text-shine">
+          🔥 Built by Owais Ahmad Dar from Kashmir - Class 12 Student • v1.1.3 🔥
         </p>
       </div>
     </div>

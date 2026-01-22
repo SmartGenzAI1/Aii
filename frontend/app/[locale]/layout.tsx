@@ -17,9 +17,9 @@ import "./globals.css"
 
 const inter = Inter({ subsets: ["latin"] })
 const APP_NAME = "GenZ AI"
-const APP_DEFAULT_TITLE = "GenZ AI - The Ultimate AI Chat Experience"
+const APP_DEFAULT_TITLE = "GenZ AI - Built for the Culture, Powered by Innovation 🚀"
 const APP_TITLE_TEMPLATE = "%s | GenZ AI"
-const APP_DESCRIPTION = "🔥 The Ultimate AI Chat Experience for Gen Z - Modern AI chat with multi-provider support, real-time failover, and vibes that match your energy. Chat with Groq, Claude, GPT, and more!"
+const APP_DESCRIPTION = "✨ The Ultimate AI Chat Experience for Gen Z - Modern AI chat with multi-provider support, real-time failover, and vibes that match your energy. Built by Owais Ahmad Dar from Kashmir. Chat with Groq, Claude, GPT, and more! 💫"
 
 interface RootLayoutProps {
   children: ReactNode

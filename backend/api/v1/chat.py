@@ -14,14 +14,18 @@ from core.enhanced_security import (
     validate_model_access,
     log_security_event
 )
+from core.genz_ai_personality import genz_personality_engine
 from app.db.session import get_db
 from services.ai_router import AIRouter
 from services.stream import stream_response
+# from services.genz_stream import adapt_response_to_genz  # TODO: Implement post-streaming adaptation
 from services.models import resolve_model
 from services.prompts import sanitize_prompt
 from core.config import settings
 from core.content_filter import content_filter
+from app.db.models import User
 import logging
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -236,13 +240,14 @@ async def chat(  # CRITICAL SECURITY: Zero Trust Implementation
         )
 
         # Stream response from provider
-        stream_generator = ai_router.stream(
+        base_stream_generator = ai_router.stream(
             prompt=safe_prompt,
             model=real_model,
             provider=provider,
         )
 
-        return stream_response(stream_generator)
+        # Return streaming response (GenZ adaptation will be added in future enhancement)
+        return stream_response(base_stream_generator)
 
     except ValueError as e:
         logger.warning(f"AI provider configuration error: {e}")
