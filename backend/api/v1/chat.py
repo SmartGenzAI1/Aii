@@ -8,9 +8,13 @@ from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Literal
 
-from app.deps.auth import get_current_user
+from core.enhanced_security import (
+    get_current_user_secure,
+    validate_prompt_security,
+    validate_model_access,
+    log_security_event
+)
 from app.db.session import get_db
-from app.db.models import User
 from services.ai_router import AIRouter
 from services.stream import stream_response
 from services.models import resolve_model
@@ -100,11 +104,11 @@ class ChatRequest(BaseModel):
     summary="Chat with AI",
     description="Send a message and get an AI response",
 )
-async def chat(  # Critical path - must be fast and reliable
+async def chat(  # CRITICAL SECURITY: Zero Trust Implementation
     request: Request,
     payload: ChatRequest,
     background_tasks: BackgroundTasks,
-    user: User = Depends(get_current_user),
+    auth_data: dict = Depends(get_current_user_secure),
     db: AsyncSession = Depends(get_db),
     ai_router: AIRouter = Depends(get_ai_router),
 ):
@@ -124,9 +128,15 @@ async def chat(  # Critical path - must be fast and reliable
     # Get request ID for tracing
     request_id = getattr(request.state, "request_id", "unknown")
 
-    # Validate user exists
+    # Get authenticated user from enhanced security
+    user = auth_data["user"]
+    user_id = auth_data["user_id"]
+    user_email = auth_data["email"]
+
+    # Validate user exists (should be guaranteed by enhanced security, but double-check)
     if not user:
-        logger.warning(f"Unauthenticated request [request_id: {request_id}]")
+        logger.warning(f"Security breach: authenticated user not found [request_id: {request_id}]")
+        await log_security_event("user_not_found", user_id, {"request_id": request_id}, request)
         raise HTTPException(status_code=401, detail="User not authenticated")
 
     # ===== REQUEST SIZE VALIDATION =====
@@ -147,13 +157,29 @@ async def chat(  # Critical path - must be fast and reliable
         except ValueError:
             pass  # Invalid header, ignore
 
-    # ===== CONTENT FILTERING =====
-    filter_result = content_filter.filter_content(payload.prompt)
+    # ===== ENHANCED SECURITY: Prompt Validation =====
+    try:
+        security_result = validate_prompt_security(payload.prompt)
+        safe_prompt = security_result["sanitized"]
+    except HTTPException:
+        # Re-raise security validation errors
+        raise
+    except Exception as e:
+        logger.error(f"Prompt security validation failed: {e}")
+        await log_security_event("prompt_validation_error", user_id, {"error": str(e)}, request)
+        raise HTTPException(status_code=400, detail="Prompt validation failed")
+
+    # ===== CONTENT FILTERING (Additional Layer) =====
+    filter_result = content_filter.filter_content(safe_prompt)
     if filter_result.blocked:
         logger.warning(
-            f"Content blocked for user {user.email}: {filter_result.reasons[:1]} "
+            f"Content blocked for user {user_email}: {filter_result.reasons[:1]} "
             f"[request_id: {request_id}]"
         )
+        await log_security_event("content_blocked", user_id, {
+            "reasons": filter_result.reasons[:2],
+            "request_id": request_id
+        }, request)
         raise HTTPException(
             status_code=400,
             detail={
@@ -164,7 +190,7 @@ async def chat(  # Critical path - must be fast and reliable
         )
 
     # Use sanitized content if available
-    safe_prompt = filter_result.sanitized_content or payload.prompt
+    safe_prompt = filter_result.sanitized_content or safe_prompt
 
     # ===== RATE LIMITING CHECK =====
     if user.daily_used >= user.daily_quota:
@@ -263,11 +289,12 @@ async def chat(  # Critical path - must be fast and reliable
 
 @router.get("/quota", summary="Get user quota")
 async def get_quota(
-    user: User = Depends(get_current_user),
+    auth_data: dict = Depends(get_current_user_secure),
 ):
     """
     Get current user's quota information.
     """
+    user = auth_data["user"]
     return {
         "used": user.daily_used,
         "limit": user.daily_quota,
@@ -281,7 +308,7 @@ async def get_quota(
 
 @router.get("/models", summary="List available models")
 async def list_models(
-    user: User = Depends(get_current_user),
+    auth_data: dict = Depends(get_current_user_secure),
 ):
     """
     List available AI models for this user with real-time availability.
