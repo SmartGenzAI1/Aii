@@ -51,7 +51,7 @@ try:
         **get_engine_kwargs(),
     )
     db_type = "PostgreSQL" if settings.DATABASE_URL else "SQLite"
-    logger.info(f"✅ Database engine created successfully ({db_type})")
+    logger.info(f"Database engine created successfully ({db_type})")
 except Exception as e:
     logger.error(f"❌ Failed to create database engine: {e}")
     raise RuntimeError("Database configuration failed")
@@ -114,7 +114,7 @@ async def check_database_connection() -> bool:
     try:
         async with engine.begin() as conn:
             await conn.execute(__import__("sqlalchemy").text("SELECT 1"))
-        logger.info("✅ Database connection verified")
+        logger.info("Database connection verified")
         return True
     except Exception as e:
         logger.error(f"❌ Database connection failed: {e}")
@@ -127,7 +127,7 @@ async def cleanup_database():
     """
     try:
         await engine.dispose()
-        logger.info("✅ Database connections closed")
+        logger.info("Database connections closed")
     except Exception as e:
         logger.error(f"Error closing database: {e}")
 
@@ -148,11 +148,10 @@ async def initialize_local_database():
         async with engine.begin() as conn:
             await conn.run_sync(models.Base.metadata.create_all)
 
-        logger.info("✅ Local SQLite database initialized")
+        logger.info("Local SQLite database initialized")
 
         # Create a demo admin user for testing
         from .models import User
-        from datetime import date
         from sqlalchemy import select
 
         async with get_db_session() as session:
@@ -163,18 +162,17 @@ async def initialize_local_database():
 
             if not existing_user:
                 demo_user = User(
-                    id=1,  # Fixed ID for demo
                     email="admin@genzai.ai",
                     daily_quota=1000,
                     daily_used=0,
-                    last_reset=date.today(),
+                    last_reset=datetime.utcnow(),
                     is_admin=True,
                     created_at=datetime.utcnow(),
                     updated_at=datetime.utcnow(),
                 )
                 session.add(demo_user)
                 await session.commit()
-                logger.info("✅ Demo admin user created: admin@genzai.ai")
+                logger.info("Demo admin user created: admin@genzai.ai")
 
     except Exception as e:
         logger.error(f"❌ Failed to initialize local database: {e}")

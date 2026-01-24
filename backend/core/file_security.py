@@ -1,17 +1,18 @@
 # backend/core/file_security.py
 """
 Production-ready file upload security and validation.
+FIXED: Added proper MIME detection with python-magic and filetype
 """
 
 import os
-# import magic  # TODO: Install python-magic for MIME detection
+import magic
 import hashlib
+import filetype
 from typing import Optional, Dict, Any, Tuple
 from pathlib import Path
 import logging
 
 logger = logging.getLogger(__name__)
-
 
 class FileSecurityValidator:
     """
@@ -75,8 +76,12 @@ class FileSecurityValidator:
     }
 
     def __init__(self):
-        # self._magic = magic.Magic(mime=True)  # TODO: Install python-magic
-        pass
+        try:
+            self._magic = magic.Magic(mime=True)
+            logger.info("✅ python-magic MIME detection initialized")
+        except Exception as e:
+            logger.warning(f"⚠️ python-magic not available, falling back to filetype: {e}")
+            self._magic = None
 
     def validate_file(
         self,
@@ -129,7 +134,7 @@ class FileSecurityValidator:
             if not size_valid:
                 return False, metadata
 
-            # 5. MIME type validation
+            # 5. MIME type validation with enhanced detection
             mime_valid, mime_metadata = self._validate_mime_type(file_data, filename)
             metadata.update(mime_metadata)
             if not mime_valid:
@@ -204,7 +209,7 @@ class FileSecurityValidator:
 
     def _validate_mime_type(self, file_data: bytes, filename: str) -> Tuple[bool, Dict[str, Any]]:
         """
-        Validate MIME type from extension (magic detection disabled for now).
+        Validate MIME type using multiple detection methods.
         """
         metadata: Dict[str, Any] = {}
 
@@ -212,13 +217,46 @@ class FileSecurityValidator:
         ext = Path(filename).suffix.lower()
         expected_mime = self.EXTENSION_MIME_MAP.get(ext)
 
-        # Check if expected MIME is allowed
-        if expected_mime and expected_mime not in self.ALLOWED_MIME_TYPES:
-            metadata['mime_error'] = f'MIME type not allowed: {expected_mime}'
+        # Detect actual MIME using multiple methods
+        detected_mime = None
+
+        # Method 1: python-magic (most reliable)
+        if self._magic:
+            try:
+                detected_mime = self._magic.from_buffer(file_data)
+                logger.debug(f"python-magic detected: {detected_mime}")
+            except Exception as e:
+                logger.warning(f"python-magic detection failed: {e}")
+                detected_mime = None
+
+        # Method 2: filetype library (fallback)
+        if not detected_mime:
+            try:
+                kind = filetype.guess(file_data)
+                if kind:
+                    detected_mime = kind.mime
+                    logger.debug(f"filetype detected: {detected_mime}")
+            except Exception as e:
+                logger.warning(f"filetype detection failed: {e}")
+
+        # Method 3: Fallback to extension-based detection
+        if not detected_mime:
+            detected_mime = expected_mime
+            logger.warning(f"Falling back to extension-based MIME detection: {detected_mime}")
+
+        # Validate MIME type
+        if detected_mime and detected_mime not in self.ALLOWED_MIME_TYPES:
+            metadata['mime_error'] = f'MIME type not allowed: {detected_mime}'
             return False, metadata
 
+        # Check for MIME spoofing (extension doesn't match content)
+        if expected_mime and detected_mime and expected_mime != detected_mime:
+            metadata['warnings'].append(f'MIME type mismatch: expected {expected_mime}, detected {detected_mime}')
+            # This is a warning, not an error, to avoid false positives
+
         metadata['expected_mime'] = expected_mime
-        metadata['detected_mime'] = expected_mime  # Simplified for now
+        metadata['detected_mime'] = detected_mime
+        metadata['mime_type'] = detected_mime
         return True, metadata
 
     def _validate_content(self, file_data: bytes, filename: str) -> Tuple[bool, Dict]:
@@ -238,6 +276,20 @@ class FileSecurityValidator:
                     metadata['content_error'] = f'Potentially dangerous content detected: {pattern}'
                     return False, metadata
 
+        # Check for common malware signatures (basic detection)
+        malware_signatures = [
+            b'X5O!P%@AP[4\\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*',
+            b'<?php',
+            b'<%@',
+            b'#!/bin/bash',
+            b'#!/bin/sh'
+        ]
+
+        for signature in malware_signatures:
+            if signature in file_data:
+                metadata['content_error'] = f'Potential malware signature detected'
+                return False, metadata
+
         return True, metadata
 
     def _security_scan(self, file_data: bytes, filename: str) -> Dict:
@@ -251,11 +303,11 @@ class FileSecurityValidator:
 
         metadata = {
             'scan_status': 'clean',  # 'clean', 'suspicious', 'infected'
-            'scan_engine': 'placeholder',
+            'scan_engine': 'basic_signature_check',
             'scan_timestamp': None
         }
 
-        # Placeholder: always pass for now
+        # Basic signature check already done in _validate_content
         # In production, this would integrate with actual scanning service
 
         return metadata
@@ -277,10 +329,8 @@ class FileSecurityValidator:
         secure_filename = f"{timestamp}_{unique_id}_{user_id}{ext}"
         return secure_filename
 
-
 # Global file security validator instance
 file_validator = FileSecurityValidator()
-
 
 def validate_upload_security(
     file_data: bytes,
@@ -292,7 +342,6 @@ def validate_upload_security(
     Convenience function for file upload validation.
     """
     return file_validator.validate_file(file_data, filename, user_id, workspace_id)
-
 
 def generate_secure_filename(original_filename: str, user_id: str) -> str:
     """

@@ -17,7 +17,6 @@ from typing import Dict, List, Optional, Set, Tuple, Any
 import logging
 from dataclasses import dataclass, field
 import aiofiles
-import pickle
 
 from cryptography.fernet import Fernet, InvalidToken
 from cryptography.hazmat.primitives import hashes

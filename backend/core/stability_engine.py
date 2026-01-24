@@ -78,9 +78,7 @@ class StabilityEngine:
         # Initialize recovery strategies
         self._initialize_recovery_strategies()
 
-        # Start background tasks
-        asyncio.create_task(self._health_monitor())
-        asyncio.create_task(self._error_cleanup())
+        # Don't start background tasks during import - will be started when app starts
 
     def _initialize_circuit_breakers(self):
         """Initialize circuit breakers for critical services."""
@@ -394,7 +392,25 @@ class StabilityEngine:
             ) / len([e for e in self.error_records if e.recovery_time is not None]) if self.error_records else 0
         }
 
-# Global stability engine instance
-stability_engine = StabilityEngine()
+# Global stability engine instance - background tasks will be started when app starts
+class LazyStabilityEngine:
+    def __init__(self):
+        self._instance = None
+    
+    def __getattr__(self, name):
+        if self._instance is None:
+            self._instance = StabilityEngine()
+        return getattr(self._instance, name)
+
+    def start_background_tasks(self):
+        if self._instance is None:
+            self._instance = StabilityEngine()
+        # Start background tasks when explicitly called by application
+        loop = asyncio.get_event_loop()
+        if loop.is_running():
+            asyncio.create_task(self._instance._health_monitor())
+            asyncio.create_task(self._instance._error_cleanup())
+
+stability_engine = LazyStabilityEngine()
 
 __all__ = ['StabilityEngine', 'stability_engine']

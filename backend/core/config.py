@@ -104,8 +104,10 @@ class Settings(BaseSettings):
 
     @field_validator("JWT_SECRET")
     @classmethod
-    def validate_jwt_secret(cls, v: str) -> str:
-        """Ensure JWT secret is strong enough."""
+    def validate_jwt_secret(cls, v: Optional[str]) -> Optional[str]:
+        """Ensure JWT secret is strong enough when provided."""
+        if v is None:
+            return v
         if len(v) < 32:
             raise ValueError("JWT_SECRET must be at least 32 characters")
         return v
@@ -153,15 +155,17 @@ class Settings(BaseSettings):
     def effective_database_url(self) -> str:
         """Get the effective database URL, falling back to SQLite for local development."""
         if self.DATABASE_URL:
-            # Convert PostgreSQL URLs to use asyncpg driver for async operations
+            # Normalize to async drivers
             if self.DATABASE_URL.startswith("postgresql://"):
                 return self.DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
+            if self.DATABASE_URL.startswith("postgres://"):
+                return self.DATABASE_URL.replace("postgres://", "postgresql+asyncpg://", 1)
             return self.DATABASE_URL
         else:
             # Fallback to local SQLite database for development/demo mode
             import os
             db_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "genzai_local.db")
-            return f"sqlite:///{db_path}"
+            return f"sqlite+aiosqlite:///{db_path}"
 
 
 # Singleton instance
@@ -192,11 +196,6 @@ def validate_startup():
     else:
         db_type = "SQLite (local fallback)"
 
-    # Generate a default JWT secret for development if not provided
-    if not settings.JWT_SECRET:
-        import secrets
-        settings.JWT_SECRET = secrets.token_hex(32)
-        print(f"✅ Generated development JWT secret")
-
-    print(f"✅ Configuration validated for {settings.ENV} environment")
-    print(f"✅ Database: {db_type}")
+    
+    print(f"Configuration validated for {settings.ENV} environment")
+    print(f"Database: {db_type}")

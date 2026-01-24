@@ -29,6 +29,7 @@ from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from api.v1 import chat, status, health, admin, web_search
+from services.user_service import register_user_service
 from core.config import settings, validate_startup
 from core.logging import setup_logging
 from app.db.session import check_database_connection, cleanup_database
@@ -38,6 +39,7 @@ from app.middleware.request_validation import RequestValidationMiddleware
 from core.exceptions import global_exception_handler
 from core.stability_engine import stability_engine
 from services.provider_monitor import start_provider_monitor
+from core.monitoring import MonitoringMiddleware, stop_monitoring
 
 import logging
 import os
@@ -69,6 +71,14 @@ async def lifespan(app: FastAPI):
         start_provider_monitor()
         logger.info("[OK] Provider monitor started")
 
+        # Register user service
+        register_user_service(app)
+        logger.info("[OK] User service registered")
+
+        # Start stability engine background tasks
+        stability_engine.start_background_tasks()
+        logger.info("[OK] Stability engine tasks started")
+
         logger.info(f"[START] GenZ AI Backend starting in {settings.ENV} mode")
 
     except Exception as e:
@@ -83,10 +93,17 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error(f"Error during shutdown: {e}")
 
+    # Stop monitoring threads
+    try:
+        stop_monitoring()
+        logger.info("[OK] Monitoring stopped")
+    except Exception as e:
+        logger.error(f"Error stopping monitoring: {e}")
+
 
 app = FastAPI(
     title="GenZ AI Backend",
-    version="1.0.0",
+    version="1.1.3",
     description="Multi-provider AI orchestration platform",
     lifespan=lifespan,
     docs_url="/docs",
@@ -136,11 +153,14 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.allowed_origins,  # Now a list via @property
     allow_credentials=False,
-    allow_methods=["GET", "POST"],
+    allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["Content-Type", "Authorization"],
     expose_headers=["X-Request-ID", "X-RateLimit-Remaining"],
     max_age=3600,
 )
+
+# 6. Monitoring middleware (request/metrics)
+app.add_middleware(MonitoringMiddleware)
 
 
 # ===== EXCEPTION HANDLERS =====
@@ -183,7 +203,7 @@ async def root():
         "status": "ok",
         "service": "GenZ AI Backend",
         "environment": settings.ENV,
-        "version": "1.0.0",
+        "version": "1.1.3",
         "docs": {
             "swagger": "/docs",
             "redoc": "/redoc",
@@ -206,7 +226,7 @@ async def health_check():
 
     return {
         "status": "healthy" if is_healthy else "degraded",
-        "version": "1.1.4",
+        "version": "1.1.3",
         "service": "GenZ AI Backend",
         "uptime": health_status["uptime"],
         "stability_metrics": {
@@ -226,8 +246,8 @@ async def ready_check():
 
     # Check if at least one AI provider is configured
     ai_ready = (
-        len(settings.GROQ_API_KEYS.split(",")) > 0 or
-        len(settings.OPENROUTER_API_KEYS.split(",")) > 0 or
+        len(settings.groq_api_keys) > 0 or
+        len(settings.openrouter_api_keys) > 0 or
         settings.HUGGINGFACE_API_KEY is not None
     )
 

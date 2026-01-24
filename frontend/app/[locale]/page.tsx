@@ -57,7 +57,7 @@ export default function HomePage() {
         </Link>
 
         <p className="text-sm text-white/60 mt-6 genz-text-shine">
-          🔥 Built by Owais Ahmad Dar from Kashmir - Class 12 Student • v1.1.4 🔥
+          🔥 Built by Owais Ahmad Dar from Kashmir - Class 12 Student • v1.1.3 🔥
         </p>
       </div>
     </div>
