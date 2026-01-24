@@ -25,7 +25,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from api.v1 import chat, status, health, admin, web_search
@@ -36,6 +36,7 @@ from app.db.session import check_database_connection, cleanup_database
 from app.middleware.request_id import RequestIDMiddleware
 from app.middleware.security import SecurityHeadersMiddleware
 from app.middleware.request_validation import RequestValidationMiddleware
+from app.middleware.rate_limit import RateLimitMiddleware
 from core.exceptions import global_exception_handler
 from core.stability_engine import stability_engine
 from services.provider_monitor import start_provider_monitor
@@ -43,6 +44,16 @@ from core.monitoring import MonitoringMiddleware, stop_monitoring
 
 import logging
 import os
+try:
+    from opentelemetry import trace
+    from opentelemetry.sdk.resources import Resource
+    from opentelemetry.sdk.trace import TracerProvider
+    from opentelemetry.sdk.trace.export import BatchSpanProcessor
+    from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+    from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+except Exception:  # optional tracing
+    trace = None
+    Resource = TracerProvider = BatchSpanProcessor = OTLPSpanExporter = FastAPIInstrumentor = None  # type: ignore
 
 logger = logging.getLogger(__name__)
 
@@ -80,6 +91,20 @@ async def lifespan(app: FastAPI):
         logger.info("[OK] Stability engine tasks started")
 
         logger.info(f"[START] GenZ AI Backend starting in {settings.ENV} mode")
+
+        # Configure OpenTelemetry tracing if endpoint provided
+        try:
+            otel_endpoint = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
+            if otel_endpoint and trace and OTLPSpanExporter:
+                resource = Resource.create({"service.name": "genz-ai-backend", "environment": settings.ENV})
+                provider = TracerProvider(resource=resource)
+                exporter = OTLPSpanExporter(endpoint=otel_endpoint, timeout=5)
+                provider.add_span_processor(BatchSpanProcessor(exporter))
+                trace.set_tracer_provider(provider)
+                FastAPIInstrumentor.instrument_app(app)
+                logger.info("[OK] OpenTelemetry tracing configured")
+        except Exception as e:
+            logger.warning(f"[WARN] Failed to configure OpenTelemetry: {e}")
 
     except Exception as e:
         logger.error(f"[WARN] Startup warning: {e}")
@@ -121,6 +146,9 @@ app.add_middleware(SecurityHeadersMiddleware)
 
 # 3. Request validation
 app.add_middleware(RequestValidationMiddleware)
+
+# 3b. Distributed rate limiting
+app.add_middleware(RateLimitMiddleware)
 
 # 4. Trusted hosts - FIXED
 trusted_hosts = ["*"]  # Allow all in development
@@ -259,6 +287,18 @@ async def ready_check():
         "ai_providers": "configured" if ai_ready else "not_configured",
         "environment": settings.ENV,
     }
+
+
+# ===== METRICS ENDPOINT =====
+@app.get("/metrics", include_in_schema=False)
+async def metrics():
+    try:
+        from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
+        data = generate_latest()
+        return Response(content=data, media_type=CONTENT_TYPE_LATEST)
+    except Exception as e:
+        # Fallback to JSON error to avoid crashing if prometheus is not installed
+        return JSONResponse(status_code=500, content={"error": f"metrics_unavailable: {e}"})
 
 
 if __name__ == "__main__":

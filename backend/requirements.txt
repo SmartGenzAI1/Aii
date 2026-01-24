@@ -18,3 +18,19 @@ typer>=0.12.0
 psutil>=5.9.0
 python-magic>=0.4.27
 filetype>=1.2.0
+# Observability and metrics
+prometheus-client>=0.20.0
+# Tracing
+opentelemetry-sdk>=1.26.0
+opentelemetry-exporter-otlp>=1.26.0
+opentelemetry-instrumentation-fastapi>=0.47b0
+# Rate limiting backend
+redis>=5.0.1
+# Auth (PyJWT used in core/security.py)
+pyjwt>=2.8.0
+# Migrations and server
+alembic>=1.12.1
+gunicorn>=21.2.0
+# Testing and load testing
+pytest>=7.4.0
+locust>=2.20.0
