@@ -154,8 +154,8 @@ class PerformanceMonitor:
         self.slow_operation_threshold = 2.0  # seconds
         self.very_slow_operation_threshold = 10.0  # seconds
 
-        # Start cleanup task
-        asyncio.create_task(self._cleanup_expired_operations())
+        # Cleanup task will be started when needed
+        self._cleanup_task: Optional[asyncio.Task] = None
 
     async def measure_operation(
         self,
@@ -336,5 +336,12 @@ class PerformanceMonitor:
 
 # Global performance monitor instance
 performance_monitor = PerformanceMonitor()
+
+# Start cleanup task when event loop is available
+async def start_performance_monitor():
+    if performance_monitor._cleanup_task is None:
+        performance_monitor._cleanup_task = asyncio.create_task(
+            performance_monitor._cleanup_expired_operations()
+        )
 
 __all__ = ['PerformanceMonitor', 'SmartCache', 'performance_monitor']

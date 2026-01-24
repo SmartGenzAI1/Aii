@@ -185,15 +185,13 @@ class OptimizedDatabase:
             except Exception as e:
                 logger.error(f"Error collecting database metrics: {e}")
     
-    @asynccontextmanager
     async def get_session(self, timeout: Optional[int] = None) -> AsyncSession:
         """Get database session with timeout and error handling."""
         if not self._is_initialized:
             await self.initialize()
-        
-        session = None
+
         start_time = time.time()
-        
+
         try:
             # Acquire connection with timeout
             if timeout:
@@ -202,28 +200,20 @@ class OptimizedDatabase:
                     timeout=timeout
                 )
             else:
-                session = await self.async_session_maker()
-            
-            yield session
-            
+                session = self.async_session_maker()
+
+            return session
+
         except asyncio.TimeoutError:
             logger.error(f"Database session timeout after {timeout} seconds")
             raise OperationalError("Session timeout", None, "Connection timeout")
-        
+
         except Exception as e:
-            if session:
-                await session.rollback()
             self.metrics.record_error()
             logger.error(f"Database session error: {e}")
             raise
-        
+
         finally:
-            if session:
-                try:
-                    await session.close()
-                except Exception as e:
-                    logger.warning(f"Error closing session: {e}")
-            
             # Record metrics
             duration = time.time() - start_time
             is_slow = duration > self.config.slow_query_threshold
