@@ -22,6 +22,8 @@ export interface Database {
           avatar_url: string | null
           created_at: string
           updated_at: string
+          // UI/behavior flags
+          use_azure_openai?: boolean
           // API Keys added by server helpers
           openai_api_key?: string
           anthropic_api_key?: string
@@ -107,6 +109,132 @@ export interface Database {
           include_profile_context?: boolean | null
           include_workspace_instructions?: boolean | null
           embeddings_provider?: string | null
+        }
+      }
+      tools: {
+        Row: {
+          id: string
+          user_id: string
+          folder_id: string | null
+          name: string
+          description: string | null
+          url: string
+          schema: Json
+          custom_headers: Json
+          sharing: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          folder_id?: string | null
+          name: string
+          description?: string | null
+          url: string
+          schema?: Json
+          custom_headers?: Json
+          sharing?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          folder_id?: string | null
+          name?: string
+          description?: string | null
+          url?: string
+          schema?: Json
+          custom_headers?: Json
+          sharing?: string
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      prompts: {
+        Row: {
+          id: string
+          user_id: string
+          folder_id: string | null
+          name: string
+          content: string
+          sharing: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          folder_id?: string | null
+          name: string
+          content: string
+          sharing?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          folder_id?: string | null
+          name?: string
+          content?: string
+          sharing?: string
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      assistants: {
+        Row: {
+          id: string
+          user_id: string
+          folder_id: string
+          name: string
+          description: string
+          image_path: string
+          model: string
+          prompt: string
+          temperature: number
+          context_length: number
+          include_profile_context: boolean
+          include_workspace_instructions: boolean
+          embeddings_provider: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          folder_id?: string
+          name: string
+          description?: string
+          image_path?: string
+          model: string
+          prompt: string
+          temperature: number
+          context_length: number
+          include_profile_context: boolean
+          include_workspace_instructions: boolean
+          embeddings_provider: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          folder_id?: string
+          name?: string
+          description?: string
+          image_path?: string
+          model?: string
+          prompt?: string
+          temperature?: number
+          context_length?: number
+          include_profile_context?: boolean
+          include_workspace_instructions?: boolean
+          embeddings_provider?: string
+          created_at?: string
+          updated_at?: string
         }
       }
       [key: string]: {

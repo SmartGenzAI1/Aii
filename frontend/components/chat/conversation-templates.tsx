@@ -10,7 +10,14 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { Lightbulb, Code, FileText, MessageCircle, Zap, Brain } from "@tabler/icons-react"
+import {
+  IconBolt,
+  IconBrain,
+  IconBulb,
+  IconCode,
+  IconFileText,
+  IconMessageCircle
+} from "@tabler/icons-react"
 import { trackTemplateUsed } from "@/lib/analytics"
 
 interface Template {
@@ -28,7 +35,7 @@ const CONVERSATION_TEMPLATES: Template[] = [
     name: "🔥 Code Review Vibes",
     description: "Level up your code with AI feedback",
     prompt: "Yo, check this code out and drop those fire improvements for performance, readability, and best practices. Make it lit! 💻✨",
-    icon: Code,
+    icon: IconCode,
     category: "Dev Squad"
   },
   {
@@ -36,7 +43,7 @@ const CONVERSATION_TEMPLATES: Template[] = [
     name: "📝 Doc Drop",
     description: "Generate that comprehensive docs",
     prompt: "Help me create straight fire documentation for this project/feature. Include setup vibes, API deets, and usage examples that actually make sense. 📚🚀",
-    icon: FileText,
+    icon: IconFileText,
     category: "Creator Mode"
   },
   {
@@ -44,7 +51,7 @@ const CONVERSATION_TEMPLATES: Template[] = [
     name: "🐛 Bug Buster",
     description: "Debug like a boss with AI",
     prompt: "I'm stuck with this issue: [describe your problem]. I've tried [what you've tried]. The error says [error message]. Help me debug this mess, bestie! 🛠️💪",
-    icon: Zap,
+    icon: IconBolt,
     category: "Dev Squad"
   },
   {
@@ -52,7 +59,7 @@ const CONVERSATION_TEMPLATES: Template[] = [
     name: "🧠 Concept Crusher",
     description: "Break down complex topics easily",
     prompt: "Explain [topic/concept] in simple, relatable terms? Break it down step by step with real examples that actually click. Make it make sense! 🤯💡",
-    icon: Brain,
+    icon: IconBrain,
     category: "Learn & Grow"
   },
   {
@@ -60,7 +67,7 @@ const CONVERSATION_TEMPLATES: Template[] = [
     name: "💡 Idea Storm",
     description: "Brainstorm creative vibes for your project",
     prompt: "Working on [project/idea] and need some creative inspo. Help me brainstorm wild solutions and fresh approaches. Think outside the box, get innovative! 🌈🎨",
-    icon: Lightbulb,
+    icon: IconBulb,
     category: "Creator Mode"
   },
   {
@@ -68,7 +75,7 @@ const CONVERSATION_TEMPLATES: Template[] = [
     name: "💬 GenZ Chat",
     description: "Real talk with AI",
     prompt: "Hey! Down for a chill convo. What's popping in your world today? Let's keep it 100! 😎✨",
-    icon: MessageCircle,
+    icon: IconMessageCircle,
     category: "Social Squad"
   },
   {
@@ -76,7 +83,7 @@ const CONVERSATION_TEMPLATES: Template[] = [
     name: "😂 Meme Master",
     description: "Create viral memes with AI",
     prompt: "Create a hilarious meme about [topic]. Make it relatable, funny, and shareable. Include the text and describe the image format! 📸😂",
-    icon: Lightbulb,
+    icon: IconBulb,
     category: "Fun Zone"
   },
   {
@@ -84,7 +91,7 @@ const CONVERSATION_TEMPLATES: Template[] = [
     name: "📈 Trend Hunter",
     description: "Stay ahead of the curve",
     prompt: "What's the latest in [industry/topic]? Give me the tea on emerging trends, what's hot right now, and what's coming next. Keep me woke! 🔥📊",
-    icon: Zap,
+    icon: IconBolt,
     category: "Trend Alert"
   }
 ]
@@ -100,7 +107,7 @@ export function ConversationTemplates({ onSelectTemplate, children }: Conversati
       <DialogTrigger asChild>
         {children || (
           <Button variant="outline" size="sm" className="gap-2">
-            <Lightbulb className="size-4" />
+            <IconBulb className="size-4" />
             Templates
           </Button>
         )}

@@ -36,11 +36,11 @@
     "next-env.d.ts",
     "**/*.ts",
     "**/*.tsx",
-    ".next/types/**/*.ts",
-    "./.next/types/**/*.ts",
-    "i18nConfig.js"
+    "i18nConfig.js",
+    ".next/types/**/*.ts"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "__tests__"
   ]
 }

@@ -3,7 +3,30 @@ import { VALID_ENV_KEYS } from "@/types/valid-keys"
 import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
 
-export async function getServerProfile() {
+export type ServerProfile = Tables<"profiles"> & {
+  // This flag is stored in DB in some environments but may not be present
+  // in generated types; keep it optional but typed.
+  use_azure_openai?: boolean
+
+  // Keys may come from the DB OR be injected from env vars at runtime.
+  openai_api_key?: string
+  openai_organization_id?: string
+  anthropic_api_key?: string
+  google_gemini_api_key?: string
+  mistral_api_key?: string
+  groq_api_key?: string
+  perplexity_api_key?: string
+  openrouter_api_key?: string
+
+  azure_openai_api_key?: string
+  azure_openai_endpoint?: string
+  azure_openai_35_turbo_id?: string
+  azure_openai_45_vision_id?: string
+  azure_openai_45_turbo_id?: string
+  azure_openai_embeddings_id?: string
+}
+
+export async function getServerProfile(): Promise<ServerProfile> {
   const cookieStore = cookies()
   const supabase = createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -37,7 +60,7 @@ export async function getServerProfile() {
   return profileWithKeys
 }
 
-function addApiKeysToProfile(profile: Tables<"profiles">) {
+function addApiKeysToProfile(profile: Tables<"profiles">): ServerProfile {
   const apiKeys = {
     [VALID_ENV_KEYS.OPENAI_API_KEY]: "openai_api_key",
     [VALID_ENV_KEYS.ANTHROPIC_API_KEY]: "anthropic_api_key",
@@ -63,7 +86,7 @@ function addApiKeysToProfile(profile: Tables<"profiles">) {
     }
   }
 
-  return profile
+  return profile as ServerProfile
 }
 
 export function checkApiKey(apiKey: string | null, keyName: string) {

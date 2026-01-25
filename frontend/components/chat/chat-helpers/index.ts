@@ -23,10 +23,14 @@ import React from "react"
 import { toast } from "sonner"
 import { v4 as uuidv4 } from "uuid"
 
+type ProfileForChat = Partial<Tables<"profiles">> & {
+  use_azure_openai?: boolean
+}
+
 export const validateChatSettings = (
   chatSettings: ChatSettings | null,
   modelData: LLM | undefined,
-  profile: Tables<"profiles"> | null,
+  profile: ProfileForChat | null,
   selectedWorkspace: Tables<"workspaces"> | null,
   messageContent: string
 ) => {
@@ -146,7 +150,7 @@ export const createTempMessages = (
 
 export const handleLocalChat = async (
   payload: ChatPayload,
-  profile: Tables<"profiles">,
+  profile: ProfileForChat,
   chatSettings: ChatSettings,
   tempAssistantMessage: ChatMessage,
   isRegeneration: boolean,
@@ -189,7 +193,7 @@ export const handleLocalChat = async (
 
 export const handleHostedChat = async (
   payload: ChatPayload,
-  profile: Tables<"profiles">,
+  profile: ProfileForChat,
   modelData: LLM,
   tempAssistantChatMessage: ChatMessage,
   isRegeneration: boolean,
@@ -348,7 +352,7 @@ export const processResponse = async (
 
 export const handleCreateChat = async (
   chatSettings: ChatSettings,
-  profile: Tables<"profiles">,
+  profile: ProfileForChat & { user_id: string },
   selectedWorkspace: Tables<"workspaces">,
   messageContent: string,
   selectedAssistant: Tables<"assistants">,
@@ -408,7 +412,7 @@ export const handleCreateChat = async (
 export const handleCreateMessages = async (
   chatMessages: ChatMessage[],
   currentChat: Tables<"chats">,
-  profile: Tables<"profiles">,
+  profile: ProfileForChat & { user_id: string },
   modelData: LLM,
   messageContent: string,
   generatedText: string,
