@@ -8,16 +8,39 @@ import { NextRequest, NextResponse } from "next/server"
 
 export const runtime = "edge"
 
-export async function POST(request: NextRequest) {
-  const json = await request.json()
-  const { chatSettings, messages } = json as {
-    chatSettings: ChatSettings
-    messages: any[]
-  }
+interface ChatRequest {
+  chatSettings: ChatSettings
+  messages: any[]
+}
 
+export async function POST(request: NextRequest) {
   try {
+    // Validate request body exists
+    if (!request.body) {
+      return createErrorResponse(
+        new Error('Request body is required')
+      )
+    }
+
+    const json = await request.json()
+    const { chatSettings, messages } = json as ChatRequest
+
+    // Validate required fields
+    if (!chatSettings || !messages || !Array.isArray(messages)) {
+      return createErrorResponse(
+        new Error('Invalid request format: chatSettings and messages array are required')
+      )
+    }
+
+    if (messages.length === 0) {
+      return createErrorResponse(
+        new Error('Messages array cannot be empty')
+      )
+    }
+
     const profile = await getServerProfile()
 
+    // Validate API key
     checkApiKey(profile.anthropic_api_key || null, "Anthropic")
 
     let ANTHROPIC_FORMATTED_MESSAGES: any = messages.slice(1)
@@ -73,38 +96,63 @@ export async function POST(request: NextRequest) {
       try {
         const stream = AnthropicStream(response)
         return new StreamingTextResponse(stream)
-      } catch (error: any) {
-        console.error("Error parsing Anthropic API response:", error)
-        return new NextResponse(
-          JSON.stringify({
-            message:
-              "An error occurred while parsing the Anthropic API response"
-          }),
-          { status: 500 }
+      } catch (streamError: any) {
+        console.error("Error parsing Anthropic API response:", streamError)
+        return createErrorResponse(
+          new Error("Failed to parse Anthropic API response")
         )
       }
-    } catch (error: any) {
-      console.error("Error calling Anthropic API:", error)
+    } catch (apiError: any) {
+      console.error("Error calling Anthropic API:", apiError)
+      const errorMessage = apiError?.error?.message || apiError.message || "Unknown API error"
+      const statusCode = apiError?.status || 500
       return new NextResponse(
         JSON.stringify({
-          message: "An error occurred while calling the Anthropic API"
+          error: errorMessage,
+          code: 'ANTHROPIC_API_ERROR',
+          timestamp: new Date().toISOString()
         }),
-        { status: 500 }
+        { status: statusCode, headers: { 'Content-Type': 'application/json' } }
       )
     }
+  } catch (parseError: any) {
+    console.error("Error parsing request:", parseError)
+    return createErrorResponse(
+      new Error(`Failed to parse request body: ${parseError.message}`)
+    )
+    }
   } catch (error: any) {
-    let sanitizedError = error
+    console.error("Unexpected error in Anthropic chat route:", error)
+    
+    // Map specific error messages to user-friendly ones
+    let userMessage = "An unexpected error occurred"
+    let errorCode = "UNKNOWN_ERROR"
+    let statusCode = 500
 
-    // Sanitize specific error messages
     if (error?.message) {
-      let errorMessage = error.message
-      if (errorMessage.toLowerCase().includes("api key not found")) {
-        sanitizedError = { ...error, message: "Anthropic API Key not found. Please set it in your profile settings." }
-      } else if ((error.status || error.code) === 401) {
-        sanitizedError = { ...error, message: "Anthropic API Key is incorrect. Please fix it in your profile settings." }
+      const msg = error.message.toLowerCase()
+      if (msg.includes("api key") || msg.includes("unauthorized")) {
+        userMessage = "Anthropic API Key not found or invalid. Please set it in your profile settings."
+        errorCode = "AUTH_ERROR"
+        statusCode = 401
+      } else if (msg.includes("rate limit")) {
+        userMessage = "Rate limit exceeded. Please try again later."
+        errorCode = "RATE_LIMIT"
+        statusCode = 429
+      } else if (msg.includes("timeout")) {
+        userMessage = "Request timeout. Please try again."
+        errorCode = "TIMEOUT"
+        statusCode = 504
       }
     }
 
-    return createErrorResponse(sanitizedError)
+    return new NextResponse(
+      JSON.stringify({
+        error: userMessage,
+        code: errorCode,
+        timestamp: new Date().toISOString()
+      }),
+      { status: statusCode, headers: { 'Content-Type': 'application/json' } }
+    )
   }
 }

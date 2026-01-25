@@ -1,17 +1,41 @@
-// @ts-nocheck
 import { CHAT_SETTING_LIMITS } from "@/lib/chat-setting-limits"
 import { checkApiKey, getServerProfile } from "@/lib/server/server-chat-helpers"
+import { createErrorResponse } from "@/lib/utils"
 import { ChatSettings } from "@/types"
 import { OpenAIStream, StreamingTextResponse } from "ai"
 import OpenAI from "openai"
 
 export const runtime = "edge"
+
+interface ChatRequest {
+  chatSettings: ChatSettings
+  messages: any[]
+}
+
 export async function POST(request: Request) {
-  const json = await request.json()
-  const { chatSettings, messages } = json as {
-    chatSettings: ChatSettings
-    messages: any[]
+  try {
+    if (!request.body) {
+      return createErrorResponse(
+        new Error('Request body is required')
+      )
+    }
+
+    const json = await request.json()
+    const { chatSettings, messages } = json as ChatRequest
+
+    if (!chatSettings || !messages || !Array.isArray(messages)) {
+      return createErrorResponse(
+        new Error('Invalid request format: chatSettings and messages array are required')
+      )
+    }
+  } catch (parseError: any) {
+    return createErrorResponse(
+      new Error(`Failed to parse request: ${parseError.message}`)
+    )
   }
+
+  const json = await request.json()
+  const { chatSettings, messages } = json as ChatRequest
 
   try {
     const profile = await getServerProfile()
@@ -38,19 +62,39 @@ export async function POST(request: Request) {
     // Respond with the stream
     return new StreamingTextResponse(stream)
   } catch (error: any) {
-    let errorMessage = error.message || "An unexpected error occurred"
-    const errorCode = error.status || 500
+    console.error("Error in Groq chat route:", error)
+    
+    let userMessage = "An unexpected error occurred"
+    let errorCode = "UNKNOWN_ERROR"
+    let statusCode = 500
 
-    if (errorMessage.toLowerCase().includes("api key not found")) {
-      errorMessage =
-        "Groq API Key not found. Please set it in your profile settings."
-    } else if (errorCode === 401) {
-      errorMessage =
-        "Groq API Key is incorrect. Please fix it in your profile settings."
+    if (error?.message) {
+      const msg = error.message.toLowerCase()
+      if (msg.includes("api key") || msg.includes("unauthorized")) {
+        userMessage = "Groq API Key not found or invalid. Please set it in your profile settings."
+        errorCode = "AUTH_ERROR"
+        statusCode = 401
+      } else if (msg.includes("rate limit")) {
+        userMessage = "Rate limit exceeded. Please try again later."
+        errorCode = "RATE_LIMIT"
+        statusCode = 429
+      } else if (msg.includes("timeout")) {
+        userMessage = "Request timeout. Please try again."
+        errorCode = "TIMEOUT"
+        statusCode = 504
+      }
     }
 
-    return new Response(JSON.stringify({ message: errorMessage }), {
-      status: errorCode
-    })
+    return new Response(
+      JSON.stringify({
+        error: userMessage,
+        code: errorCode,
+        timestamp: new Date().toISOString()
+      }),
+      {
+        status: statusCode,
+        headers: { 'Content-Type': 'application/json' }
+      }
+    )
   }
 }

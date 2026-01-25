@@ -22,6 +22,7 @@ except KeyboardInterrupt:
     pass
 
 from contextlib import asynccontextmanager
+from datetime import datetime
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
@@ -195,13 +196,25 @@ app.add_middleware(MonitoringMiddleware)
 
 @app.exception_handler(StarletteHTTPException)
 async def http_exception_handler(request: Request, exc: StarletteHTTPException):
-    """Handle HTTP exceptions."""
+    """Handle HTTP exceptions with proper logging."""
+    from datetime import datetime
     request_id = getattr(request.state, "request_id", "unknown")
-    logger.warning(f"HTTP {exc.status_code}: {exc.detail} [request_id: {request_id}]")
+    user_id = getattr(request.state, "user_id", "anonymous")
+    
+    # Log with context
+    logger.warning(
+        f"HTTP {exc.status_code}: {exc.detail} [user: {user_id}, request_id: {request_id}]",
+        extra={
+            "status_code": exc.status_code,
+            "path": request.url.path,
+            "method": request.method
+        }
+    )
+    
     return JSONResponse(
         status_code=exc.status_code,
         content={
-            "error": exc.detail,
+            "error": exc.detail if isinstance(exc.detail, str) else str(exc.detail),
             "request_id": request_id,
         },
     )
@@ -209,7 +222,11 @@ async def http_exception_handler(request: Request, exc: StarletteHTTPException):
 
 @app.exception_handler(Exception)
 async def general_exception_handler(request: Request, exc: Exception):
-    """Handle unexpected exceptions."""
+    """Handle unexpected exceptions with proper logging and recovery."""
+    logger.error(
+        f"Unhandled exception in {request.method} {request.url.path}: {type(exc).__name__}: {str(exc)}",
+        exc_info=exc
+    )
     return await global_exception_handler(request, exc)
 
 
@@ -242,63 +259,99 @@ async def root():
 
 @app.get("/health", include_in_schema=False)
 async def health_check():
-    """Health check for uptime monitors."""
-    health_status = stability_engine.get_health_status()
+    """Health check for uptime monitors - provides system health status."""
+    try:
+        health_status = stability_engine.get_health_status()
 
-    # Determine overall health
-    is_healthy = (
-        health_status["error_rate"] < 1.0 and  # Less than 1 error per minute
-        health_status["recovery_success_rate"] > 0.8 and  # >80% recovery success
-        all(cb["state"] != "open" for cb in health_status["circuit_breakers"].values())  # No open circuit breakers
-    )
+        # Determine overall health based on multiple factors
+        error_rate = health_status.get("error_rate", 0)
+        recovery_rate = health_status.get("recovery_success_rate", 0)
+        circuit_breakers = health_status.get("circuit_breakers", {})
+        
+        # Health is good if: error rate < 1 error/min, recovery > 80%, no open circuits
+        is_healthy = (
+            error_rate < 1.0 and
+            recovery_rate > 0.8 and
+            all(cb.get("state") != "open" for cb in circuit_breakers.values())
+        )
 
-    return {
-        "status": "healthy" if is_healthy else "degraded",
-        "version": "1.1.3",
-        "service": "GenZ AI Backend",
-        "uptime": health_status["uptime"],
-        "stability_metrics": {
-            "error_rate": health_status["error_rate"],
-            "recovery_success_rate": health_status["recovery_success_rate"],
-            "active_circuit_breakers": len([cb for cb in health_status["circuit_breakers"].values() if cb["state"] != "closed"]),
-            "recent_errors": health_status["recent_errors"]
+        return {
+            "status": "healthy" if is_healthy else "degraded",
+            "version": "1.1.3",
+            "service": "GenZ AI Backend",
+            "uptime": health_status.get("uptime", 0),
+            "stability_metrics": {
+                "error_rate": error_rate,
+                "recovery_success_rate": recovery_rate,
+                "active_circuit_breakers": len([cb for cb in circuit_breakers.values() if cb.get("state") != "closed"]),
+                "recent_errors": health_status.get("recent_errors", 0)
+            },
+            "timestamp": datetime.utcnow().isoformat()
         }
-    }
+    except Exception as e:
+        logger.error(f"Error in health check: {e}", exc_info=e)
+        return {
+            "status": "unknown",
+            "error": str(e),
+            "version": "1.1.3",
+            "timestamp": datetime.utcnow().isoformat()
+        }, 503
 
 
 @app.get("/ready", include_in_schema=False)
 async def ready_check():
     """Readiness probe - checks if service can accept traffic."""
-    # Check database connectivity
-    db_ready = await check_database_connection()
+    try:
+        # Check database connectivity
+        db_ready = await check_database_connection()
 
-    # Check if at least one AI provider is configured
-    ai_ready = (
-        len(settings.groq_api_keys) > 0 or
-        len(settings.openrouter_api_keys) > 0 or
-        settings.HUGGINGFACE_API_KEY is not None
-    )
+        # Check if at least one AI provider is configured
+        ai_ready = (
+            len(settings.groq_api_keys) > 0 or
+            len(settings.openrouter_api_keys) > 0 or
+            settings.HUGGINGFACE_API_KEY is not None or
+            settings.OPENAI_API_KEY is not None
+        )
 
-    ready = db_ready and ai_ready
+        ready = db_ready and ai_ready
 
-    return {
-        "ready": ready,
-        "database": "connected" if db_ready else "disconnected",
-        "ai_providers": "configured" if ai_ready else "not_configured",
-        "environment": settings.ENV,
-    }
+        return {
+            "ready": ready,
+            "database": "connected" if db_ready else "disconnected",
+            "ai_providers": "configured" if ai_ready else "not_configured",
+            "environment": settings.ENV,
+            "timestamp": datetime.utcnow().isoformat()
+        }, (200 if ready else 503)
+    except Exception as e:
+        logger.error(f"Error in readiness check: {e}", exc_info=e)
+        return {
+            "ready": False,
+            "error": str(e),
+            "timestamp": datetime.utcnow().isoformat()
+        }, 503
 
 
 # ===== METRICS ENDPOINT =====
 @app.get("/metrics", include_in_schema=False)
 async def metrics():
+    """Prometheus metrics endpoint - optional, requires prometheus_client."""
     try:
         from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
+        
         data = generate_latest()
         return Response(content=data, media_type=CONTENT_TYPE_LATEST)
+    except ImportError:
+        logger.debug("prometheus_client not installed, metrics endpoint disabled")
+        return JSONResponse(
+            status_code=501,
+            content={"error": "Metrics endpoint not configured", "detail": "Install prometheus-client to enable metrics"}
+        )
     except Exception as e:
-        # Fallback to JSON error to avoid crashing if prometheus is not installed
-        return JSONResponse(status_code=500, content={"error": f"metrics_unavailable: {e}"})
+        logger.error(f"Error generating metrics: {e}", exc_info=e)
+        return JSONResponse(
+            status_code=500,
+            content={"error": "Failed to generate metrics", "detail": str(e)}
+        )
 
 
 if __name__ == "__main__":

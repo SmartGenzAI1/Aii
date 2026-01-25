@@ -146,26 +146,34 @@ class Settings(BaseSettings):
         return [origin.strip() for origin in self.ALLOWED_ORIGINS.split(",") if origin.strip()]
 
     def is_production(self) -> bool:
+        """Check if running in production environment."""
         return self.ENV.lower() == "production"
 
     def is_development(self) -> bool:
+        """Check if running in development environment."""
         return self.ENV.lower() == "development"
 
     @property
     def effective_database_url(self) -> str:
-        """Get the effective database URL, falling back to SQLite for local development."""
+        """Get the effective database URL, falling back to SQLite for local development.
+        
+        This ensures proper async driver handling for PostgreSQL connections.
+        """
         if self.DATABASE_URL:
             # Normalize to async drivers
-            if self.DATABASE_URL.startswith("postgresql://"):
-                return self.DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
-            if self.DATABASE_URL.startswith("postgres://"):
-                return self.DATABASE_URL.replace("postgres://", "postgresql+asyncpg://", 1)
-            return self.DATABASE_URL
+            url = self.DATABASE_URL
+            if url.startswith("postgresql://"):
+                return url.replace("postgresql://", "postgresql+asyncpg://", 1)
+            if url.startswith("postgres://"):
+                return url.replace("postgres://", "postgresql+asyncpg://", 1)
+            return url
         else:
             # Fallback to local SQLite database for development/demo mode
             import os
-            db_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "genzai_local.db")
-            return f"sqlite+aiosqlite:///{db_path}"
+            db_dir = os.path.dirname(os.path.dirname(__file__))
+            db_path = os.path.join(db_dir, "genzai_local.db")
+            # Use absolute path for SQLite
+            return f"sqlite+aiosqlite:///{db_path.replace(os.sep, '/')}"
 
 
 # Singleton instance
@@ -177,25 +185,46 @@ def validate_startup():
     """Called in app startup to verify all critical settings."""
     errors = []
 
+    # JWT secret validation for production
     if settings.is_production() and not settings.JWT_SECRET:
-        errors.append("JWT_SECRET not configured in production")
+        errors.append("JWT_SECRET not configured in production - required for security")
 
+    # CORS validation for production
     if settings.is_production() and not settings.allowed_origins:
-        errors.append("ALLOWED_ORIGINS not configured in production")
+        errors.append("ALLOWED_ORIGINS not configured in production - required for CORS")
 
-    # Database is optional - will fall back to SQLite in development
+    # Database validation for production
     if settings.is_production() and not settings.DATABASE_URL:
-        errors.append("DATABASE_URL not configured in production")
+        errors.append("DATABASE_URL not configured in production - SQLite fallback not suitable")
+
+    # AI providers validation
+    has_providers = (
+        len(settings.groq_api_keys) > 0 or
+        len(settings.openrouter_api_keys) > 0 or
+        settings.HUGGINGFACE_API_KEY or
+        settings.OPENAI_API_KEY
+    )
+    
+    if settings.is_production() and not has_providers:
+        errors.append("No AI providers configured - configure at least one provider (Groq, OpenRouter, HuggingFace, or OpenAI)")
 
     if errors:
-        raise RuntimeError(f"Configuration errors: {', '.join(errors)}")
+        raise RuntimeError(f"Configuration validation failed:\n  • " + "\n  • ".join(errors))
 
-    # Show which database backend is being used
-    if settings.DATABASE_URL:
-        db_type = "PostgreSQL"
-    else:
-        db_type = "SQLite (local fallback)"
-
+    # Show configuration summary
+    db_type = "PostgreSQL" if settings.DATABASE_URL else "SQLite (local fallback)"
+    providers = []
+    if settings.groq_api_keys:
+        providers.append(f"Groq ({len(settings.groq_api_keys)} keys)")
+    if settings.openrouter_api_keys:
+        providers.append(f"OpenRouter ({len(settings.openrouter_api_keys)} keys)")
+    if settings.HUGGINGFACE_API_KEY:
+        providers.append("HuggingFace")
+    if settings.OPENAI_API_KEY:
+        providers.append("OpenAI")
     
-    print(f"Configuration validated for {settings.ENV} environment")
+    print(f"\n✅ Configuration validated for {settings.ENV.upper()} environment")
+    print(f"   Database: {db_type}")
+    print(f"   AI Providers: {', '.join(providers) if providers else 'None configured'}")
+    print(f"   Log Level: {settings.LOG_LEVEL}\n")
     print(f"Database: {db_type}")
