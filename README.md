@@ -7,20 +7,24 @@
 </p>
 
 <p align="center">
-  🔥 Slay the AI game with multi-provider magic, instant failover, and vibes that match your energy
+  🔥 v1.1.4: Enterprise-Grade AI Orchestration with Multi-Provider Failover
 </p>
 
 ---
 
 ## 🌟 Overview
 
-GenZ AI is a cutting-edge AI orchestration platform built for the modern generation:
+GenZ AI is a production-ready AI orchestration platform with enterprise-grade security and stability:
 
-- 🤖 **Multi-Provider AI Routing** - Groq, OpenRouter, HuggingFace with automatic failover
-- ⚡ **Real-Time Health Monitoring** - Live provider status and uptime tracking
-- 🔒 **Enterprise-Grade Security** - JWT auth, rate limiting, and secure API key management
-- 🎨 **Gen Z UI/UX** - Modern, vibrant interface with AI-powered features
-- 🏗️ **Clean Monorepo Architecture** - Separated frontend and backend for scalability
+- 🤖 **Multi-Provider AI Routing** - Groq, OpenRouter, HuggingFace with intelligent failover
+- ⚡ **Advanced Health Monitoring** - Real-time provider status, circuit breakers, error recovery
+- 🔒 **Enterprise Security** - JWT auth, rate limiting, content filtering, zero-trust architecture
+- 🎨 **Modern Gen Z UI** - Next.js with real-time streaming, responsive design
+- 🏗️ **Scalable Monorepo** - FastAPI backend + React frontend with clean separation
+- 📊 **Production Monitoring** - Structured logging, metrics, health checks, OpenTelemetry support
+- 🚀 **Performance Optimized** - Async streaming, connection pooling, caching, lazy loading
+
+**Current Version**: v1.1.4 (Jan 25, 2026)
 
 ---
 
@@ -28,26 +32,37 @@ GenZ AI is a cutting-edge AI orchestration platform built for the modern generat
 
 ```
 genz-ai/
-├── frontend/          # Next.js React App
+├── frontend/          # Next.js React App (TypeScript)
 │   ├── app/          # Next.js App Router
 │   ├── components/   # Reusable UI Components
-│   ├── lib/          # Utility Functions
+│   ├── lib/          # Utilities, validation, error handling
 │   ├── public/       # Static Assets
 │   └── package.json  # Frontend Dependencies
 │
 ├── backend/           # FastAPI Python Server + CLI
 │   ├── main.py       # FastAPI Application Entry Point
 │   ├── app/          # FastAPI Core Application
-│   │   ├── db/       # Database Models & Sessions
-│   │   ├── middleware/# Security & Request Middleware
-│   │   ├── deps/     # Dependencies
+│   │   ├── db/       # Database Models, Sessions, Migrations
+│   │   ├── middleware/# Security, Rate Limiting, Validation
+│   │   ├── deps/     # Dependency Injection
 │   │   └── providers/# AI Provider Clients
-│   ├── api/v1/       # API Endpoints
-│   ├── core/         # Configuration & Security
-│   ├── services/     # AI Services & Routing
-│   ├── cli/          # GenZ AI CLI (Python)
+│   ├── api/v1/       # REST API Endpoints (v1)
+│   ├── core/         # Configuration, Security, Logging
+│   ├── services/     # AI Services, Routing, Streaming
+│   ├── cli/          # GenZ AI CLI Tool
 │   │   ├── main.py   # CLI Entry Point
 │   │   └── commands/ # CLI Commands
+│   ├── migrations/   # Database Migrations (Alembic)
+│   └── requirements.txt
+│
+├── supabase/         # Supabase Configuration
+│   ├── migrations/   # Database Schema
+│   └── types.ts      # Generated Types
+│
+├── infrastructure/   # Deployment & Infrastructure
+│   └── k8s/         # Kubernetes Configuration
+│
+└── docs/            # Documentation Files
 │   └── requirements.txt
 │
 └── README.md
