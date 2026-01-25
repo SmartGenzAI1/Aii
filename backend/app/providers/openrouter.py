@@ -10,6 +10,10 @@ from core.errors import AppError
 class OpenRouterProvider(AIProvider):
     name = "openrouter"
 
+    def __init__(self, http_client: httpx.AsyncClient | None = None):
+        # Optional shared client for connection pooling (recommended in production).
+        self._client = http_client
+
     async def stream(
         self,
         prompt: str,
@@ -28,19 +32,57 @@ class OpenRouterProvider(AIProvider):
             "stream": True,
         }
 
-        async with httpx.AsyncClient(timeout=20.0) as client:
-            async with client.stream(
-                "POST",
-                "https://openrouter.ai/api/v1/chat/completions",
-                headers=headers,
-                json=payload,
-            ) as response:
+        timeout = httpx.Timeout(30.0, connect=5.0)
+        url = "https://openrouter.ai/api/v1/chat/completions"
 
-                if response.status_code != 200:
-                    raise AppError(502, "OpenRouter provider error")
+        try:
+            if self._client is None:
+                async with httpx.AsyncClient(timeout=timeout, follow_redirects=True) as client:
+                    async with client.stream(
+                        "POST",
+                        url,
+                        headers=headers,
+                        json=payload,
+                    ) as response:
+                        if response.status_code == 401:
+                            raise AppError(401, "Invalid OpenRouter API key")
+                        elif response.status_code == 429:
+                            raise AppError(429, "OpenRouter rate limit exceeded")
+                        elif response.status_code == 503:
+                            raise AppError(503, "OpenRouter service temporarily unavailable")
+                        elif response.status_code != 200:
+                            error_text = await response.aread()
+                            raise AppError(502, f"OpenRouter provider error: {response.status_code}: {error_text!r}")
 
-                async for line in response.aiter_lines():
-                    if line.startswith("data: "):
-                        chunk = line.removeprefix("data: ").strip()
-                        if chunk and chunk != "[DONE]":
-                            yield chunk
+                        async for line in response.aiter_lines():
+                            if line.startswith("data: "):
+                                chunk = line.removeprefix("data: ").strip()
+                                if chunk and chunk != "[DONE]":
+                                    yield chunk
+            else:
+                async with self._client.stream(
+                    "POST",
+                    url,
+                    headers=headers,
+                    json=payload,
+                    timeout=timeout,
+                ) as response:
+                    if response.status_code == 401:
+                        raise AppError(401, "Invalid OpenRouter API key")
+                    elif response.status_code == 429:
+                        raise AppError(429, "OpenRouter rate limit exceeded")
+                    elif response.status_code == 503:
+                        raise AppError(503, "OpenRouter service temporarily unavailable")
+                    elif response.status_code != 200:
+                        error_text = await response.aread()
+                        raise AppError(502, f"OpenRouter provider error: {response.status_code}: {error_text!r}")
+
+                    async for line in response.aiter_lines():
+                        if line.startswith("data: "):
+                            chunk = line.removeprefix("data: ").strip()
+                            if chunk and chunk != "[DONE]":
+                                yield chunk
+        except httpx.TimeoutException:
+            raise AppError(504, "OpenRouter request timeout - please try again")
+        except httpx.NetworkError:
+            raise AppError(503, "Network error communicating with OpenRouter")

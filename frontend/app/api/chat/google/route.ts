@@ -6,10 +6,23 @@ import { GoogleGenerativeAI } from "@google/generative-ai"
 export const runtime = "edge"
 
 export async function POST(request: Request) {
-  const json = await request.json()
-  const { chatSettings, messages } = json as {
-    chatSettings: ChatSettings
-    messages: any[]
+  let payload: { chatSettings: ChatSettings; messages: any[] }
+  try {
+    payload = (await request.json()) as { chatSettings: ChatSettings; messages: any[] }
+  } catch {
+    return new Response(JSON.stringify({ message: "Invalid JSON payload" }), {
+      status: 400,
+      headers: { "Content-Type": "application/json; charset=utf-8" }
+    })
+  }
+
+  const { chatSettings, messages } = payload
+
+  if (!chatSettings || !messages || !Array.isArray(messages) || messages.length === 0) {
+    return new Response(
+      JSON.stringify({ message: "Invalid request format: chatSettings and non-empty messages array are required" }),
+      { status: 400, headers: { "Content-Type": "application/json; charset=utf-8" } }
+    )
   }
 
   try {
@@ -20,14 +33,19 @@ export async function POST(request: Request) {
     const genAI = new GoogleGenerativeAI(profile.google_gemini_api_key || "")
     const googleModel = genAI.getGenerativeModel({ model: chatSettings.model })
 
-    const lastMessage = messages.pop()
+    const lastMessage = messages[messages.length - 1]
+    const history = messages.slice(0, -1)
 
     const chat = googleModel.startChat({
-      history: messages,
+      history,
       generationConfig: {
         temperature: chatSettings.temperature
       }
     })
+
+    if (!lastMessage?.parts) {
+      return createErrorResponse(new Error("Invalid messages format for Google Gemini"))
+    }
 
     const response = await chat.sendMessageStream(lastMessage.parts)
 

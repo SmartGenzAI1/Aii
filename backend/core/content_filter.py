@@ -126,7 +126,6 @@ class ContentFilter:
                 risk_level = ContentRisk.LOW_RISK
             elif warning_count == 2:
                 risk_level = ContentRisk.HIGH_RISK
-                    risk_level = ContentRisk.HIGH_RISK if risk_level == ContentRisk.SAFE else risk_level
 
         # Sanitize content if needed
         sanitized = self._sanitize_content(content)

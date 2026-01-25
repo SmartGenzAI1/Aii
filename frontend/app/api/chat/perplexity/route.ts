@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { checkApiKey, getServerProfile } from "@/lib/server/server-chat-helpers"
 import { ChatSettings } from "@/types"
 import { OpenAIStream, StreamingTextResponse } from "ai"
@@ -7,10 +6,23 @@ import OpenAI from "openai"
 export const runtime = "edge"
 
 export async function POST(request: Request) {
-  const json = await request.json()
-  const { chatSettings, messages } = json as {
-    chatSettings: ChatSettings
-    messages: any[]
+  let payload: { chatSettings: ChatSettings; messages: any[] }
+  try {
+    payload = (await request.json()) as { chatSettings: ChatSettings; messages: any[] }
+  } catch {
+    return new Response(JSON.stringify({ message: "Invalid JSON payload" }), {
+      status: 400,
+      headers: { "Content-Type": "application/json; charset=utf-8" }
+    })
+  }
+
+  const { chatSettings, messages } = payload
+
+  if (!chatSettings || !messages || !Array.isArray(messages) || messages.length === 0) {
+    return new Response(
+      JSON.stringify({ message: "Invalid request format: chatSettings and non-empty messages array are required" }),
+      { status: 400, headers: { "Content-Type": "application/json; charset=utf-8" } }
+    )
   }
 
   try {
@@ -46,7 +58,8 @@ export async function POST(request: Request) {
     }
 
     return new Response(JSON.stringify({ message: errorMessage }), {
-      status: errorCode
+      status: errorCode,
+      headers: { "Content-Type": "application/json; charset=utf-8" }
     })
   }
 }

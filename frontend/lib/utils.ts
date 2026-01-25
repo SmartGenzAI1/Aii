@@ -56,9 +56,14 @@ export function createErrorResponse(error: any, defaultMessage = 'An unexpected 
     error?.message ||
     defaultMessage
   )
-  const errorCode = error?.status || error?.code || 500
+  const rawStatus = error?.status || error?.code || 500
+  const status =
+    typeof rawStatus === 'number' && Number.isFinite(rawStatus)
+      ? rawStatus
+      : 500
 
   return new Response(JSON.stringify({ message: errorMessage }), {
-    status: errorCode
+    status,
+    headers: { 'Content-Type': 'application/json; charset=utf-8' }
   })
 }

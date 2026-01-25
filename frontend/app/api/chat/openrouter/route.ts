@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { checkApiKey, getServerProfile } from "@/lib/server/server-chat-helpers"
 import { ChatSettings } from "@/types"
 import { OpenAIStream, StreamingTextResponse } from "ai"
@@ -9,10 +8,23 @@ import { ChatCompletionCreateParamsBase } from "openai/resources/chat/completion
 export const runtime: ServerRuntime = "edge"
 
 export async function POST(request: Request) {
-  const json = await request.json()
-  const { chatSettings, messages } = json as {
-    chatSettings: ChatSettings
-    messages: any[]
+  let payload: { chatSettings: ChatSettings; messages: any[] }
+  try {
+    payload = (await request.json()) as { chatSettings: ChatSettings; messages: any[] }
+  } catch (parseError: any) {
+    return new Response(JSON.stringify({ message: "Invalid JSON payload" }), {
+      status: 400,
+      headers: { "Content-Type": "application/json; charset=utf-8" }
+    })
+  }
+
+  const { chatSettings, messages } = payload
+
+  if (!chatSettings || !messages || !Array.isArray(messages) || messages.length === 0) {
+    return new Response(
+      JSON.stringify({ message: "Invalid request format: chatSettings and non-empty messages array are required" }),
+      { status: 400, headers: { "Content-Type": "application/json; charset=utf-8" } }
+    )
   }
 
   try {
@@ -37,8 +49,8 @@ export async function POST(request: Request) {
 
     return new StreamingTextResponse(stream)
   } catch (error: any) {
-    let errorMessage = error.message || "An unexpected error occurred"
-    const errorCode = error.status || 500
+    let errorMessage = error?.message || "An unexpected error occurred"
+    const errorCode = typeof error?.status === "number" ? error.status : 500
 
     if (errorMessage.toLowerCase().includes("api key not found")) {
       errorMessage =
@@ -46,7 +58,8 @@ export async function POST(request: Request) {
     }
 
     return new Response(JSON.stringify({ message: errorMessage }), {
-      status: errorCode
+      status: errorCode,
+      headers: { "Content-Type": "application/json; charset=utf-8" }
     })
   }
 }

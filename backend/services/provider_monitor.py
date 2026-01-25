@@ -5,6 +5,7 @@ Runs every 60 seconds to check provider availability.
 """
 
 import asyncio
+from contextlib import suppress
 from datetime import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -18,6 +19,8 @@ import logging
 logger = logging.getLogger(__name__)
 
 CHECK_INTERVAL = 60  # seconds
+_TASK_ATTR = "provider_monitor_task"
+_STOP_ATTR = "provider_monitor_stop"
 
 
 def get_providers():
@@ -31,14 +34,14 @@ def get_providers():
     }
 
 
-async def check_providers_loop():
+async def check_providers_loop(stop_event: asyncio.Event):
     """
     Background task loop that checks provider health every 60 seconds.
     Updates database with status.
     """
     logger.info("🔍 Provider monitor starting")
 
-    while True:
+    while not stop_event.is_set():
         try:
             # Create async session
             async with async_session_maker() as db:
@@ -102,14 +105,37 @@ async def check_providers_loop():
         except Exception as e:
             logger.error(f"❌ Provider monitor loop error: {e}", exc_info=True)
 
-        # Wait before next check
-        await asyncio.sleep(CHECK_INTERVAL)
+        # Wait before next check (interruptible)
+        with suppress(asyncio.TimeoutError):
+            await asyncio.wait_for(stop_event.wait(), timeout=CHECK_INTERVAL)
 
 
-def start_provider_monitor():
+def start_provider_monitor(app):
     """
     Start the background provider monitoring task.
     Called once during app startup in lifespan.
     """
-    task = asyncio.create_task(check_providers_loop())
+    # Idempotent start
+    existing = getattr(app.state, _TASK_ATTR, None)
+    if existing and not existing.done():
+        return
+
+    stop_event = asyncio.Event()
+    task = asyncio.create_task(check_providers_loop(stop_event))
+    setattr(app.state, _STOP_ATTR, stop_event)
+    setattr(app.state, _TASK_ATTR, task)
     logger.info("🚀 Provider monitor task created")
+
+
+async def stop_provider_monitor(app) -> None:
+    """Stop provider monitor task gracefully."""
+    stop_event = getattr(app.state, _STOP_ATTR, None)
+    task = getattr(app.state, _TASK_ATTR, None)
+
+    if stop_event is not None:
+        stop_event.set()
+
+    if task is not None:
+        task.cancel()
+        with suppress(asyncio.CancelledError):
+            await task

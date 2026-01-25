@@ -7,6 +7,7 @@ Handles routing requests to multiple AI providers with fallback support.
 import random
 import logging
 from typing import AsyncIterator, List, Optional
+import httpx
 from core.system_prompt import SYSTEM_PROMPT
 from core.config import settings
 from app.providers.groq import GroqProvider
@@ -28,6 +29,7 @@ class AIRouter:
         groq_keys: Optional[List[str]] = None,
         openrouter_keys: Optional[List[str]] = None,
         hf_key: Optional[str] = None,
+        http_client: httpx.AsyncClient | None = None,
     ):
         """
         Initialize AI Router with provider API keys.
@@ -42,9 +44,9 @@ class AIRouter:
         self.hf_key = hf_key
 
         # Initialize providers
-        self.groq_provider = GroqProvider()
-        self.openrouter_provider = OpenRouterProvider()
-        self.hf_provider = HuggingFaceProvider()
+        self.groq_provider = GroqProvider(http_client=http_client)
+        self.openrouter_provider = OpenRouterProvider(http_client=http_client)
+        self.hf_provider = HuggingFaceProvider(http_client=http_client)
         self.ollama_provider = OllamaProvider()
 
         logger.info(

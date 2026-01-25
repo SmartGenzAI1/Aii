@@ -595,6 +595,18 @@ class MonitoringMiddleware:
                 metrics_collector.add_metric("app.avg_response_time", avg_response_time, MetricType.GAUGE)
             
             await send(message)
+
+        try:
+            await self.app(scope, receive, send_wrapper)
+        except Exception:
+            # Ensure tracking is ended even if the handler raises before response.start
+            duration = time.time() - start_time
+            request_tracker.end_request(request_id, 500)
+            metrics_collector.add_metric("app.request_count", 1, MetricType.COUNTER)
+            metrics_collector.add_metric("app.error_count", 1, MetricType.COUNTER)
+            metrics_collector.add_metric("app.response_time", duration, MetricType.HISTOGRAM)
+            tracer.end_span(span_id)
+            raise
     
     def _calculate_avg_response_time(self) -> float:
         """Calculate average response time from recent requests."""

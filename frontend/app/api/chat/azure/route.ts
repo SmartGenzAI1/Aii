@@ -1,4 +1,3 @@
-// @ts-nocheck - Suppress module resolution errors in this environment
 import { checkApiKey, getServerProfile } from "@/lib/server/server-chat-helpers"
 import { ChatAPIPayload } from "@/types"
 import { OpenAIStream, StreamingTextResponse } from "ai"
@@ -8,8 +7,24 @@ import { ChatCompletionCreateParamsBase } from "openai/resources/chat/completion
 export const runtime = "edge"
 
 export async function POST(request: Request) {
-  const json = await request.json()
-  const { chatSettings, messages } = json as ChatAPIPayload
+  let payload: ChatAPIPayload
+  try {
+    payload = (await request.json()) as ChatAPIPayload
+  } catch {
+    return new Response(JSON.stringify({ message: "Invalid JSON payload" }), {
+      status: 400,
+      headers: { "Content-Type": "application/json; charset=utf-8" }
+    })
+  }
+
+  const { chatSettings, messages } = payload
+
+  if (!chatSettings || !messages || !Array.isArray(messages) || messages.length === 0) {
+    return new Response(
+      JSON.stringify({ message: "Invalid request format: chatSettings and non-empty messages array are required" }),
+      { status: 400, headers: { "Content-Type": "application/json; charset=utf-8" } }
+    )
+  }
 
   try {
     const profile = await getServerProfile()
@@ -32,7 +47,8 @@ export async function POST(request: Request) {
         break
       default:
         return new Response(JSON.stringify({ message: "Model not found" }), {
-          status: 400
+          status: 400,
+          headers: { "Content-Type": "application/json; charset=utf-8" }
         })
     }
 
@@ -40,7 +56,8 @@ export async function POST(request: Request) {
       return new Response(
         JSON.stringify({ message: "Azure resources not found" }),
         {
-          status: 400
+          status: 400,
+          headers: { "Content-Type": "application/json; charset=utf-8" }
         }
       )
     }
@@ -67,7 +84,8 @@ export async function POST(request: Request) {
     const errorMessage = error.error?.message || "An unexpected error occurred"
     const errorCode = error.status || 500
     return new Response(JSON.stringify({ message: errorMessage }), {
-      status: errorCode
+      status: errorCode,
+      headers: { "Content-Type": "application/json; charset=utf-8" }
     })
   }
 }

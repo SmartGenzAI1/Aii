@@ -13,29 +13,22 @@ interface ChatRequest {
 }
 
 export async function POST(request: Request) {
+  let payload: ChatRequest
   try {
-    if (!request.body) {
-      return createErrorResponse(
-        new Error('Request body is required')
-      )
-    }
-
-    const json = await request.json()
-    const { chatSettings, messages } = json as ChatRequest
-
-    if (!chatSettings || !messages || !Array.isArray(messages)) {
-      return createErrorResponse(
-        new Error('Invalid request format: chatSettings and messages array are required')
-      )
-    }
+    payload = (await request.json()) as ChatRequest
   } catch (parseError: any) {
     return createErrorResponse(
-      new Error(`Failed to parse request: ${parseError.message}`)
+      new Error(`Failed to parse request: ${parseError?.message || 'Invalid JSON'}`)
     )
   }
 
-  const json = await request.json()
-  const { chatSettings, messages } = json as ChatRequest
+  const { chatSettings, messages } = payload
+
+  if (!chatSettings || !messages || !Array.isArray(messages)) {
+    return createErrorResponse(
+      new Error('Invalid request format: chatSettings and messages array are required')
+    )
+  }
 
   try {
     const profile = await getServerProfile()

@@ -13,6 +13,7 @@ from app.db.session import get_db
 from app.db.models import User
 from core.security import create_access_token
 from core.config import settings
+from app.deps.auth import get_current_user
 import logging
 
 logger = logging.getLogger(__name__)
@@ -236,6 +237,4 @@ async def refresh_token(
     )
 
 
-# ===== HELPER IMPORTS =====
-# This import must be at the end to avoid circular imports
-from app.deps.auth import get_current_user
+ 

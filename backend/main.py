@@ -29,8 +29,7 @@ from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse, Response
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from api.v1 import chat, status, health, admin, web_search
-from services.user_service import register_user_service
+from api.v1 import chat, status, health, admin, web_search, auth
 from core.config import settings, validate_startup
 from core.logging import setup_logging
 from app.db.session import check_database_connection, cleanup_database
@@ -40,11 +39,12 @@ from app.middleware.request_validation import RequestValidationMiddleware
 from app.middleware.rate_limit import RateLimitMiddleware
 from core.exceptions import global_exception_handler
 from core.stability_engine import stability_engine
-from services.provider_monitor import start_provider_monitor
+from services.provider_monitor import start_provider_monitor, stop_provider_monitor
 from core.monitoring import MonitoringMiddleware, stop_monitoring
 
 import logging
 import os
+import httpx
 try:
     from opentelemetry import trace
     from opentelemetry.sdk.resources import Resource
@@ -80,16 +80,27 @@ async def lifespan(app: FastAPI):
         from app.db.session import initialize_local_database
         await initialize_local_database()
 
-        start_provider_monitor()
-        logger.info("[OK] Provider monitor started")
+        # Shared outbound HTTP client (connection pooling) for external calls
+        # Individual calls may override timeouts as needed.
+        app.state.http_client = httpx.AsyncClient(
+            follow_redirects=True,
+            timeout=httpx.Timeout(10.0, connect=3.0, read=10.0),
+            limits=httpx.Limits(max_connections=500, max_keepalive_connections=100),
+        )
+        logger.info("[OK] Shared HTTP client initialized")
 
-        # Register user service
-        register_user_service(app)
-        logger.info("[OK] User service registered")
+        if os.getenv("DISABLE_BACKGROUND_TASKS") != "1":
+            start_provider_monitor(app)
+            logger.info("[OK] Provider monitor started")
+        else:
+            logger.info("[SKIP] Provider monitor disabled")
 
-        # Start stability engine background tasks
-        stability_engine.start_background_tasks()
-        logger.info("[OK] Stability engine tasks started")
+        if os.getenv("DISABLE_BACKGROUND_TASKS") != "1":
+            # Start stability engine background tasks
+            stability_engine.start_background_tasks()
+            logger.info("[OK] Stability engine tasks started")
+        else:
+            logger.info("[SKIP] Background tasks disabled")
 
         logger.info(f"[START] GenZ AI Backend starting in {settings.ENV} mode")
 
@@ -118,6 +129,29 @@ async def lifespan(app: FastAPI):
         logger.info("[OK] Database connections closed")
     except Exception as e:
         logger.error(f"Error during shutdown: {e}")
+
+    # Stop stability engine background tasks
+    try:
+        await stability_engine.stop_background_tasks()
+        logger.info("[OK] Stability engine tasks stopped")
+    except Exception as e:
+        logger.error(f"Error stopping stability engine tasks: {e}")
+
+    # Stop provider monitor task
+    try:
+        await stop_provider_monitor(app)
+        logger.info("[OK] Provider monitor stopped")
+    except Exception as e:
+        logger.error(f"Error stopping provider monitor: {e}")
+
+    # Close shared HTTP client
+    try:
+        http_client = getattr(app.state, "http_client", None)
+        if http_client is not None:
+            await http_client.aclose()
+        logger.info("[OK] Shared HTTP client closed")
+    except Exception as e:
+        logger.error(f"Error closing shared HTTP client: {e}")
 
     # Stop monitoring threads
     try:
@@ -235,6 +269,7 @@ async def general_exception_handler(request: Request, exc: Exception):
 app.include_router(chat.router, prefix="/api/v1", tags=["chat"])
 app.include_router(status.router, prefix="/api/v1", tags=["status"])
 app.include_router(health.router, prefix="/api/v1", tags=["health"])
+app.include_router(auth.router, prefix="/api/v1", tags=["auth"])
 app.include_router(admin.router, prefix="/api/v1", tags=["admin"])
 app.include_router(web_search.router, prefix="/api/v1", tags=["search"])
 
@@ -277,7 +312,7 @@ async def health_check():
 
         return {
             "status": "healthy" if is_healthy else "degraded",
-            "version": "1.1.3",
+            "version": "1.1.4",
             "service": "GenZ AI Backend",
             "uptime": health_status.get("uptime", 0),
             "stability_metrics": {
@@ -290,12 +325,15 @@ async def health_check():
         }
     except Exception as e:
         logger.error(f"Error in health check: {e}", exc_info=e)
-        return {
-            "status": "unknown",
-            "error": str(e),
-            "version": "1.1.3",
-            "timestamp": datetime.utcnow().isoformat()
-        }, 503
+        return JSONResponse(
+            status_code=503,
+            content={
+                "status": "unknown",
+                "error": str(e),
+                "version": "1.1.4",
+                "timestamp": datetime.utcnow().isoformat(),
+            },
+        )
 
 
 @app.get("/ready", include_in_schema=False)
@@ -315,20 +353,35 @@ async def ready_check():
 
         ready = db_ready and ai_ready
 
-        return {
-            "ready": ready,
-            "database": "connected" if db_ready else "disconnected",
-            "ai_providers": "configured" if ai_ready else "not_configured",
-            "environment": settings.ENV,
-            "timestamp": datetime.utcnow().isoformat()
-        }, (200 if ready else 503)
+        if ready:
+            return {
+                "ready": True,
+                "database": "connected",
+                "ai_providers": "configured",
+                "environment": settings.ENV,
+                "timestamp": datetime.utcnow().isoformat(),
+            }
+
+        return JSONResponse(
+            status_code=503,
+            content={
+                "ready": False,
+                "database": "disconnected" if not db_ready else "connected",
+                "ai_providers": "not_configured" if not ai_ready else "configured",
+                "environment": settings.ENV,
+                "timestamp": datetime.utcnow().isoformat(),
+            },
+        )
     except Exception as e:
         logger.error(f"Error in readiness check: {e}", exc_info=e)
-        return {
-            "ready": False,
-            "error": str(e),
-            "timestamp": datetime.utcnow().isoformat()
-        }, 503
+        return JSONResponse(
+            status_code=503,
+            content={
+                "ready": False,
+                "error": str(e),
+                "timestamp": datetime.utcnow().isoformat(),
+            },
+        )
 
 
 # ===== METRICS ENDPOINT =====

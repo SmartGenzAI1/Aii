@@ -13,6 +13,8 @@ from dataclasses import dataclass, field
 import traceback
 import sys
 
+from core.config import settings
+
 logger = logging.getLogger(__name__)
 
 @dataclass
@@ -71,6 +73,9 @@ class StabilityEngine:
         self.start_time = time.time()
         self.health_check_interval = 30.0  # seconds
         self.error_cleanup_interval = 3600.0  # 1 hour
+
+        self._health_task: asyncio.Task | None = None
+        self._cleanup_task: asyncio.Task | None = None
 
         # Initialize default circuit breakers
         self._initialize_circuit_breakers()
@@ -292,23 +297,29 @@ class StabilityEngine:
 
     async def _health_monitor(self):
         """Background health monitoring."""
-        while True:
-            try:
-                await self._update_health_metrics()
-                await asyncio.sleep(self.health_check_interval)
-            except Exception as e:
-                logger.error(f"Health monitor error: {e}")
-                await asyncio.sleep(5)
+        try:
+            while True:
+                try:
+                    await self._update_health_metrics()
+                    await asyncio.sleep(self.health_check_interval)
+                except Exception as e:
+                    logger.error(f"Health monitor error: {e}")
+                    await asyncio.sleep(5)
+        except asyncio.CancelledError:
+            return
 
     async def _error_cleanup(self):
         """Background error cleanup."""
-        while True:
-            try:
-                await self._cleanup_old_errors()
-                await asyncio.sleep(self.error_cleanup_interval)
-            except Exception as e:
-                logger.error(f"Error cleanup error: {e}")
-                await asyncio.sleep(60)
+        try:
+            while True:
+                try:
+                    await self._cleanup_old_errors()
+                    await asyncio.sleep(self.error_cleanup_interval)
+                except Exception as e:
+                    logger.error(f"Error cleanup error: {e}")
+                    await asyncio.sleep(60)
+        except asyncio.CancelledError:
+            return
 
     async def _update_health_metrics(self):
         """Update system health metrics."""
@@ -318,7 +329,8 @@ class StabilityEngine:
 
             self.system_health.uptime = time.time() - self.start_time
             self.system_health.memory_usage = psutil.virtual_memory().percent
-            self.system_health.cpu_usage = psutil.cpu_percent(interval=1)
+            # Non-blocking: do not sleep inside the event loop.
+            self.system_health.cpu_usage = psutil.cpu_percent(interval=None)
             self.system_health.last_health_check = current_time
 
             # Calculate error rate (errors per minute in last hour)
@@ -409,11 +421,25 @@ class LazyStabilityEngine:
     def start_background_tasks(self):
         if self._instance is None:
             self._instance = StabilityEngine()
-        # Start background tasks when explicitly called by application
         loop = asyncio.get_event_loop()
         if loop.is_running():
-            asyncio.create_task(self._instance._health_monitor())
-            asyncio.create_task(self._instance._error_cleanup())
+            if self._instance._health_task is None or self._instance._health_task.done():
+                self._instance._health_task = asyncio.create_task(self._instance._health_monitor())
+            if self._instance._cleanup_task is None or self._instance._cleanup_task.done():
+                self._instance._cleanup_task = asyncio.create_task(self._instance._error_cleanup())
+
+    async def stop_background_tasks(self) -> None:
+        if self._instance is None:
+            return
+        for task in (self._instance._health_task, self._instance._cleanup_task):
+            if task is not None and not task.done():
+                task.cancel()
+        for task in (self._instance._health_task, self._instance._cleanup_task):
+            if task is not None:
+                try:
+                    await task
+                except asyncio.CancelledError:
+                    pass
 
 stability_engine = LazyStabilityEngine()
 

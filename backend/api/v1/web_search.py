@@ -4,7 +4,7 @@ Web search endpoint with rate limiting and authentication.
 Prevents abuse of web search functionality.
 """
 
-from fastapi import APIRouter, Query, Depends, HTTPException
+from fastapi import APIRouter, Query, Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.deps.auth import get_current_user
@@ -25,6 +25,7 @@ router = APIRouter(prefix="/web-search", tags=["Web Search"])
     description="Search the web for information (requires authentication)",
 )
 async def search(
+    request: Request,
     q: str = Query(
         ...,
         min_length=1,
@@ -74,7 +75,12 @@ async def search(
         logger.info(f"Web search by {user.email}: {q[:50]}")
 
         # Try primary method (web scraping)
-        results = web_search_scrape(q)
+        http_client = getattr(request.app.state, "http_client", None)
+        try:
+            results = await web_search_scrape(q, client=http_client)
+        except Exception as e:
+            logger.warning(f"Web scrape failed for query: {q}: {e}")
+            results = []
 
         if results:
             return {
@@ -85,7 +91,6 @@ async def search(
             }
 
         # Fallback if scraping fails
-        logger.warning(f"Web scrape failed for query: {q}, using fallback")
         results = web_search_fallback(q)
 
         return {

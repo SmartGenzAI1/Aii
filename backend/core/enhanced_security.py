@@ -14,7 +14,6 @@ import re
 
 from core.config import settings
 from core.errors import UnauthorizedError
-from core.rate_limit import IPRateLimiter
 
 # Custom ForbiddenError since it's not imported
 class ForbiddenError(Exception):
@@ -25,7 +24,6 @@ class ForbiddenError(Exception):
 logger = logging.getLogger(__name__)
 
 security_scheme = HTTPBearer(auto_error=False)
-rate_limiter = IPRateLimiter()
 
 # =========================================
 # ZERO TRUST JWT VERIFICATION
@@ -40,15 +38,12 @@ async def verify_jwt_comprehensive(
     This is the ONLY place security decisions are made.
     """
 
-    # 1. Check rate limiting first
-    rate_limiter.check(request)
-
-    # 2. Validate token presence
+    # 1. Validate token presence
     if credentials is None:
         logger.warning(f"Missing auth token from {request.client.host}")
         raise HTTPException(status_code=401, detail="Missing authorization token")
 
-    # 3. Verify JWT signature and claims
+    # 2. Verify JWT signature and claims
     if not settings.JWT_SECRET:
         logger.error("JWT_SECRET not configured")
         raise HTTPException(status_code=500, detail="Server configuration error")
@@ -407,9 +402,6 @@ class SecurityMonitor:
                 "details": details
             })
             await db.commit()
-
-        # TODO: Send alerts to security team
-        # TODO: Implement automatic blocking for critical violations
 
     def _calculate_severity(self, activity_type: str, details: Dict) -> str:
         """Calculate severity level for security events."""

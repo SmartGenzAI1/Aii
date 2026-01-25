@@ -307,6 +307,54 @@ class AuthenticationManager:
 
 # Dependency for authentication
 security = HTTPBearer(auto_error=False)
+security_required = HTTPBearer(auto_error=True)
+
+
+def create_access_token(*, subject: str, email: str, expires_hours: int | None = None) -> str:
+    """
+    Create a JWT access token compatible with backend API expectations.
+
+    Claims:
+    - sub: user id (string)
+    - email: user email
+    - iat/exp: issued-at and expiry
+    """
+    if not settings.JWT_SECRET:
+        raise RuntimeError("JWT_SECRET not configured")
+
+    if expires_hours is None:
+        expires_hours = settings.JWT_EXPIRATION_HOURS
+
+    now = datetime.utcnow()
+    payload = {
+        "sub": str(subject),
+        "email": email,
+        "iat": now,
+        "exp": now + timedelta(hours=int(expires_hours)),
+    }
+    return jwt.encode(payload, settings.JWT_SECRET, algorithm=settings.JWT_ALGORITHM)
+
+
+async def verify_jwt(
+    credentials: HTTPAuthorizationCredentials = Depends(security_required),
+) -> Dict[str, Any]:
+    """FastAPI dependency to verify JWT bearer token and return its payload."""
+    if not settings.JWT_SECRET:
+        logger.error("JWT_SECRET not configured")
+        raise HTTPException(status_code=500, detail="Server configuration error")
+
+    token = credentials.credentials
+    try:
+        payload = jwt.decode(token, settings.JWT_SECRET, algorithms=[settings.JWT_ALGORITHM])
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token has expired")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+    if not payload.get("sub") or not payload.get("email"):
+        raise HTTPException(status_code=401, detail="Invalid token payload")
+
+    return payload
 
 
 def _effective_jwt_secret() -> str:

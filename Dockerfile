@@ -19,6 +19,7 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends \
        build-essential \
        ca-certificates \
+       libmagic1 \
     && rm -rf /var/lib/apt/lists/*
 
 # Create a non-root user
@@ -41,18 +42,8 @@ USER appuser
 
 EXPOSE 8000
 
-# Gunicorn with Uvicorn workers
-# -w: workers (override with env WORKERS)
-# --timeout: worker timeout seconds
-# --graceful-timeout: time for graceful shutdown
-# --keep-alive: seconds to keep connections alive
-ENV WORKERS=4
-CMD [ \
-  "gunicorn", "backend.main:app", \
-  "-k", "uvicorn.workers.UvicornWorker", \
-  "-w", "${WORKERS}", \
-  "-b", "0.0.0.0:8000", \
-  "--timeout", "60", \
-  "--graceful-timeout", "30", \
-  "--keep-alive", "5" \
-]
+# Run from backend directory so `main:app` resolves correctly
+WORKDIR /app/backend
+
+# Gunicorn (Uvicorn workers) configuration is in `gunicorn_conf.py`
+CMD ["gunicorn", "main:app", "-k", "uvicorn.workers.UvicornWorker", "-c", "gunicorn_conf.py"]

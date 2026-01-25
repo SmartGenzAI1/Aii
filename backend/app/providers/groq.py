@@ -16,6 +16,10 @@ class GroqProvider(AIProvider):
     name = "groq"
     api_url = "https://api.groq.com/openai/v1/chat/completions"
 
+    def __init__(self, http_client: httpx.AsyncClient | None = None):
+        # Optional shared client for connection pooling (recommended in production).
+        self._client = http_client
+
     async def stream(
         self,
         prompt: str,
@@ -60,12 +64,38 @@ class GroqProvider(AIProvider):
         timeout = httpx.Timeout(30.0, connect=5.0)
 
         try:
-            async with httpx.AsyncClient(timeout=timeout, follow_redirects=True) as client:
-                async with client.stream(
+            if self._client is None:
+                async with httpx.AsyncClient(timeout=timeout, follow_redirects=True) as client:
+                    async with client.stream(
+                        "POST",
+                        self.api_url,
+                        headers=headers,
+                        json=payload,
+                    ) as response:
+
+                        if response.status_code == 401:
+                            raise AppError(401, "Invalid Groq API key")
+                        elif response.status_code == 429:
+                            raise AppError(429, "Groq rate limit exceeded")
+                        elif response.status_code == 503:
+                            raise AppError(503, "Groq service temporarily unavailable")
+                        elif response.status_code != 200:
+                            error_text = await response.aread()
+                            logger.error(f"Groq API error {response.status_code}: {error_text}")
+                            raise AppError(502, f"Groq provider error: {response.status_code}")
+
+                        async for line in response.aiter_lines():
+                            if line.startswith("data: "):
+                                chunk = line.removeprefix("data: ").strip()
+                                if chunk and chunk != "[DONE]":
+                                    yield chunk
+            else:
+                async with self._client.stream(
                     "POST",
                     self.api_url,
                     headers=headers,
                     json=payload,
+                    timeout=timeout,
                 ) as response:
 
                     if response.status_code == 401:

@@ -57,17 +57,13 @@ async def update_user_quota(user_id: int):
 
 # ===== DEPENDENCIES =====
 
-def get_ai_router() -> AIRouter:
-    """Dependency injection for AI router. Ensures thread-safe per-request instances."""
-    """Get singleton AI router instance."""
-    groq_keys = [k.strip() for k in settings.GROQ_API_KEYS.split(",") if k.strip()] if settings.GROQ_API_KEYS else []
-    openrouter_keys = [k.strip() for k in settings.OPENROUTER_API_KEYS.split(",") if k.strip()] if settings.OPENROUTER_API_KEYS else []
-    hf_key = settings.HUGGINGFACE_API_KEY
-
+def get_ai_router(request: Request) -> AIRouter:
+    """FastAPI dependency for an AI router instance using shared connection pools."""
     return AIRouter(
-        groq_keys=groq_keys,
-        openrouter_keys=openrouter_keys,
-        hf_key=hf_key,
+        groq_keys=settings.groq_api_keys,
+        openrouter_keys=settings.openrouter_api_keys,
+        hf_key=settings.HUGGINGFACE_API_KEY,
+        http_client=getattr(request.app.state, "http_client", None),
     )
 
 

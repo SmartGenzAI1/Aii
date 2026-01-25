@@ -1,4 +1,3 @@
-// @ts-nocheck - Suppress module resolution errors in this environment
 import { checkApiKey, getServerProfile } from "@/lib/server/server-chat-helpers"
 import { ChatSettings } from "@/types"
 import { OpenAIStream, StreamingTextResponse } from "ai"
@@ -105,8 +104,8 @@ export async function POST(request: Request) {
       timestamp: new Date().toISOString()
     })
 
-    let errorMessage = "An unexpected error occurred"
-    const errorCode = error.status || 500
+    let errorMessage = error?.message || "An unexpected error occurred"
+    const errorCode = typeof error?.status === 'number' ? error.status : 500
 
     if (errorMessage.toLowerCase().includes("api key not found")) {
       errorMessage = "OpenAI API Key not found. Please set it in your profile settings."
@@ -124,7 +123,7 @@ export async function POST(request: Request) {
     }), {
       status: errorCode,
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json; charset=utf-8'
       }
     })
   }
