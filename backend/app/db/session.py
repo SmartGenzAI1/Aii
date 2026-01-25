@@ -106,18 +106,24 @@ async def get_db_session():
 
 async def check_database_connection() -> bool:
     """
-    Verify database is reachable at startup.
+    Verify database is reachable at startup with timeout protection.
     
     Returns:
-        True if connection successful
+        True if connection successful, False otherwise
     """
+    import asyncio
     try:
-        async with engine.begin() as conn:
-            await conn.execute(__import__("sqlalchemy").text("SELECT 1"))
-        logger.info("Database connection verified")
+        # Set a timeout for the connection check
+        async with asyncio.timeout(5):  # 5 second timeout
+            async with engine.begin() as conn:
+                await conn.execute(__import__("sqlalchemy").text("SELECT 1"))
+        logger.info("✓ Database connection verified")
         return True
+    except asyncio.TimeoutError:
+        logger.error("✗ Database connection timeout (exceeded 5 seconds)")
+        return False
     except Exception as e:
-        logger.error(f"❌ Database connection failed: {e}")
+        logger.error(f"✗ Database connection failed: {type(e).__name__}: {str(e)}")
         return False
 
 
@@ -136,6 +142,7 @@ async def initialize_local_database():
     """
     Initialize local SQLite database with required tables.
     Only runs when using SQLite (local development mode).
+    Creates admin user only for development purposes.
     """
     if not settings.effective_database_url.startswith("sqlite"):
         return  # Only initialize for SQLite
@@ -148,32 +155,34 @@ async def initialize_local_database():
         async with engine.begin() as conn:
             await conn.run_sync(models.Base.metadata.create_all)
 
-        logger.info("Local SQLite database initialized")
+        logger.info("✓ Local SQLite database initialized")
 
-        # Create a demo admin user for testing
+        # Create a development admin user
         from .models import User
         from sqlalchemy import select
 
         async with get_db_session() as session:
-            # Check if demo user exists
-            stmt = select(User).where(User.email == "admin@genzai.ai")
+            # Check if admin user exists
+            stmt = select(User).where(User.email == "admin@localhost")
             result = await session.execute(stmt)
             existing_user = result.scalar_one_or_none()
 
             if not existing_user:
-                demo_user = User(
-                    email="admin@genzai.ai",
-                    daily_quota=1000,
+                admin_user = User(
+                    email="admin@localhost",
+                    daily_quota=10000,  # High quota for development
                     daily_used=0,
                     last_reset=datetime.utcnow(),
                     is_admin=True,
                     created_at=datetime.utcnow(),
                     updated_at=datetime.utcnow(),
                 )
-                session.add(demo_user)
+                session.add(admin_user)
                 await session.commit()
-                logger.info("Demo admin user created: admin@genzai.ai")
+                logger.info("✓ Development admin user created: admin@localhost")
+            else:
+                logger.debug("Admin user already exists")
 
     except Exception as e:
-        logger.error(f"❌ Failed to initialize local database: {e}")
+        logger.warning(f"⚠ Failed to initialize local database: {type(e).__name__}: {str(e)}")
         # Don't raise error - allow app to continue without local DB

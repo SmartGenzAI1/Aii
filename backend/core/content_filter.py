@@ -74,7 +74,8 @@ class ContentFilter:
 
     def filter_content(self, content: str) -> FilterResult:
         """
-        Comprehensive content filtering with GenZ safety standards.
+        Comprehensive content filtering with multiple security layers.
+        GenZ-friendly but with robust safety protections.
 
         Args:
             content: User input to filter
@@ -82,22 +83,49 @@ class ContentFilter:
         Returns:
             FilterResult with risk assessment and actions
         """
+        if not content or not isinstance(content, str):
+            return FilterResult(
+                risk_level=ContentRisk.SAFE,
+                blocked=False,
+                reasons=["Invalid input"],
+                sanitized_content=""
+            )
+
         content_lower = content.lower()
         reasons = []
         risk_level = ContentRisk.SAFE
 
         # Check for blocked content first
         for pattern in self.blocked_patterns:
-            if re.search(pattern, content_lower, re.IGNORECASE):
-                reasons.append(f"Blocked pattern detected: {pattern}")
-                risk_level = ContentRisk.BLOCKED
-                break
+            try:
+                if re.search(pattern, content_lower, re.IGNORECASE):
+                    reasons.append(f"Blocked: harmful content detected")
+                    risk_level = ContentRisk.BLOCKED
+                    logger.warning(f"Blocked content detected: {reasons[0]}")
+                    break
+            except re.error as e:
+                logger.error(f"Regex error in blocked pattern: {e}")
+                continue
 
         if risk_level != ContentRisk.BLOCKED:
             # Check for warning patterns
+            warning_count = 0
             for pattern in self.warn_patterns:
-                if re.search(pattern, content_lower, re.IGNORECASE):
-                    reasons.append(f"Warning pattern detected: {pattern}")
+                try:
+                    if re.search(pattern, content_lower, re.IGNORECASE):
+                        warning_count += 1
+                        reasons.append(f"Warning: potentially risky content")
+                        if warning_count >= 3:
+                            risk_level = ContentRisk.HIGH_RISK
+                            break
+                except re.error as e:
+                    logger.error(f"Regex error in warning pattern: {e}")
+                    continue
+            
+            if warning_count == 1:
+                risk_level = ContentRisk.LOW_RISK
+            elif warning_count == 2:
+                risk_level = ContentRisk.HIGH_RISK
                     risk_level = ContentRisk.HIGH_RISK if risk_level == ContentRisk.SAFE else risk_level
 
         # Sanitize content if needed
