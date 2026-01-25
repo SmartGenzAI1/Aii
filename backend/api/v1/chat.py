@@ -18,7 +18,6 @@ from core.genz_ai_personality import genz_personality_engine
 from app.db.session import get_db
 from services.ai_router import AIRouter
 from services.stream import stream_response
-# from services.genz_stream import adapt_response_to_genz  # TODO: Implement post-streaming adaptation
 from services.models import resolve_model
 from services.prompts import sanitize_prompt
 from core.config import settings
