@@ -115,12 +115,6 @@ export async function POST(request: NextRequest) {
         { status: statusCode, headers: { 'Content-Type': 'application/json' } }
       )
     }
-  } catch (parseError: any) {
-    console.error("Error parsing request:", parseError)
-    return createErrorResponse(
-      new Error(`Failed to parse request body: ${parseError.message}`)
-    )
-    }
   } catch (error: any) {
     console.error("Unexpected error in Anthropic chat route:", error)
     
