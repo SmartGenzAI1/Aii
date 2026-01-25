@@ -132,14 +132,18 @@ class StabilityEngine:
             return result
 
         except Exception as e:
-            # Record failure
+            # Record failure (no stack trace in production for security)
+            error_details = {}
+            if settings.ENV == "development":
+                error_details["stack_trace"] = traceback.format_exc()
+            
             await self._record_error(
                 error_type=type(e).__name__,
-                error_message=str(e),
+                error_message=str(e) if settings.ENV == "development" else "An error occurred",
                 context={
                     "service": service_name,
                     "operation": operation_name,
-                    "stack_trace": traceback.format_exc()
+                    **error_details
                 }
             )
 
