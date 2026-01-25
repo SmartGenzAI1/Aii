@@ -129,8 +129,8 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="GenZ AI Backend",
-    version="1.1.3",
-    description="Multi-provider AI orchestration platform",
+    version="1.1.4",
+    description="Multi-provider AI orchestration platform with enterprise-grade stability and security",
     lifespan=lifespan,
     docs_url="/docs",
     redoc_url="/redoc",
@@ -248,7 +248,7 @@ async def root():
         "status": "ok",
         "service": "GenZ AI Backend",
         "environment": settings.ENV,
-        "version": "1.1.3",
+        "version": "1.1.4",
         "docs": {
             "swagger": "/docs",
             "redoc": "/redoc",

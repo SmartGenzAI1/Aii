@@ -62,12 +62,12 @@ class AIRouter:
         provider: str,
     ) -> AsyncIterator[str]:
         """
-        Stream AI response from specified provider.
+        Stream AI response from specified provider with comprehensive error handling.
 
         Args:
             prompt: User prompt
             model: Model name
-            provider: Provider name (groq, openrouter, huggingface)
+            provider: Provider name (groq, openrouter, huggingface, local)
 
         Yields:
             Response chunks from AI provider
@@ -76,48 +76,58 @@ class AIRouter:
             ValueError: If provider not found or no keys available
             RuntimeError: If all providers fail
         """
+        # Validate inputs
+        if not prompt or not isinstance(prompt, str):
+            raise ValueError("Prompt must be a non-empty string")
+        if not model:
+            raise ValueError("Model name is required")
 
-        # Prepare system prompt
-        messages = [
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": prompt},
-        ]
+        try:
+            if provider == "groq":
+                if not self.groq_keys:
+                    raise ValueError("No Groq API keys configured")
+                async for chunk in self._stream_groq(prompt, model):
+                    yield chunk
 
-        if provider == "groq":
-            if not self.groq_keys:
-                raise ValueError("No Groq API keys configured")
-            async for chunk in self._stream_groq(prompt, model):
-                yield chunk
+            elif provider == "openrouter":
+                if not self.openrouter_keys:
+                    raise ValueError("No OpenRouter API keys configured")
+                async for chunk in self._stream_openrouter(prompt, model):
+                    yield chunk
 
-        elif provider == "openrouter":
-            if not self.openrouter_keys:
-                raise ValueError("No OpenRouter API keys configured")
-            async for chunk in self._stream_openrouter(prompt, model):
-                yield chunk
+            elif provider == "huggingface":
+                if not self.hf_key:
+                    raise ValueError("No HuggingFace API key configured")
+                async for chunk in self._stream_huggingface(prompt, model):
+                    yield chunk
 
-        elif provider == "huggingface":
-            if not self.hf_key:
-                raise ValueError("No HuggingFace API key configured")
-            async for chunk in self._stream_huggingface(prompt, model):
-                yield chunk
+            elif provider == "local":
+                # Local Ollama provider - no API key needed
+                async for chunk in self._stream_ollama(prompt, model):
+                    yield chunk
 
-        elif provider == "local":
-            # Local Ollama provider - no API key needed
-            async for chunk in self._stream_ollama(prompt, model, messages):
-                yield chunk
-
-        else:
-            raise ValueError(f"Unknown provider: {provider}")
+            else:
+                raise ValueError(
+                    f"Unknown provider: {provider}. "
+                    f"Available providers: groq, openrouter, huggingface, local"
+                )
+        except ValueError:
+            # Re-raise validation errors
+            raise
+        except Exception as e:
+            logger.error(f"Error streaming from {provider}: {e}", exc_info=e)
+            raise RuntimeError(f"Failed to stream from {provider}: {str(e)}")
 
     async def _stream_groq(self, prompt: str, model: str) -> AsyncIterator[str]:
-        """Stream response from Groq."""
+        """Stream response from Groq with key rotation and error handling."""
         if not self.groq_keys:
             raise RuntimeError("No Groq keys available")
 
+        last_error = None
         # Try each key
         for idx, key in enumerate(self.groq_keys):
             try:
-                logger.debug(f"Trying Groq key index {idx}...")
+                logger.debug(f"Attempting Groq with key index {idx}/{len(self.groq_keys)}")
                 async for chunk in self.groq_provider.stream(
                     prompt=prompt,
                     model=model,
@@ -126,20 +136,24 @@ class AIRouter:
                     yield chunk
                 return
             except Exception as e:
-                logger.warning(f"Groq failed for key index {idx}: {e}")
-                continue
+                last_error = e
+                logger.warning(f"Groq key {idx} failed: {type(e).__name__}: {str(e)}")
+                if idx < len(self.groq_keys) - 1:
+                    continue
+                break
 
-        raise RuntimeError("All Groq keys exhausted")
+        raise RuntimeError(f"All Groq keys exhausted. Last error: {last_error}")
 
     async def _stream_openrouter(self, prompt: str, model: str) -> AsyncIterator[str]:
-        """Stream response from OpenRouter."""
+        """Stream response from OpenRouter with key rotation and error handling."""
         if not self.openrouter_keys:
             raise RuntimeError("No OpenRouter keys available")
 
+        last_error = None
         # Try each key
         for idx, key in enumerate(self.openrouter_keys):
             try:
-                logger.debug(f"Trying OpenRouter key index {idx}...")
+                logger.debug(f"Attempting OpenRouter with key index {idx}/{len(self.openrouter_keys)}")
                 async for chunk in self.openrouter_provider.stream(
                     prompt=prompt,
                     model=model,
@@ -148,18 +162,21 @@ class AIRouter:
                     yield chunk
                 return
             except Exception as e:
-                logger.warning(f"OpenRouter failed for key index {idx}: {e}")
-                continue
+                last_error = e
+                logger.warning(f"OpenRouter key {idx} failed: {type(e).__name__}: {str(e)}")
+                if idx < len(self.openrouter_keys) - 1:
+                    continue
+                break
 
-        raise RuntimeError("All OpenRouter keys exhausted")
+        raise RuntimeError(f"All OpenRouter keys exhausted. Last error: {last_error}")
 
     async def _stream_huggingface(self, prompt: str, model: str) -> AsyncIterator[str]:
-        """Stream response from HuggingFace."""
+        """Stream response from HuggingFace with proper error handling."""
         if not self.hf_key:
             raise RuntimeError("HuggingFace key not configured")
 
         try:
-            logger.debug("Trying HuggingFace...")
+            logger.debug("Attempting HuggingFace...")
             async for chunk in self.hf_provider.stream(
                 prompt=prompt,
                 model=model,
@@ -167,19 +184,18 @@ class AIRouter:
             ):
                 yield chunk
         except Exception as e:
-            logger.error(f"HuggingFace failed: {e}")
-            raise RuntimeError(f"HuggingFace unavailable: {e}")
+            logger.error(f"HuggingFace failed: {type(e).__name__}: {str(e)}", exc_info=e)
+            raise RuntimeError(f"HuggingFace unavailable: {str(e)}")
 
-    async def _stream_ollama(self, prompt: str, model: str, messages: list) -> AsyncIterator[str]:
-        """Stream response from local Ollama."""
+    async def _stream_ollama(self, prompt: str, model: str) -> AsyncIterator[str]:
+        """Stream response from local Ollama with proper error handling."""
         try:
-            logger.debug(f"Trying Ollama model: {model}")
+            logger.debug(f"Attempting Ollama with model: {model}")
             async for chunk in self.ollama_provider.stream(
                 prompt=prompt,
                 model=model,
-                messages=messages,  # Pass full conversation context
             ):
                 yield chunk
         except Exception as e:
-            logger.error(f"Ollama failed: {e}")
-            raise RuntimeError(f"Ollama unavailable: {e}")
+            logger.error(f"Ollama failed: {type(e).__name__}: {str(e)}", exc_info=e)
+            raise RuntimeError(f"Ollama unavailable: {str(e)}")

@@ -57,7 +57,7 @@ async def resolve_model(alias: str) -> Tuple[str, str]:
     """
     config = MODEL_CONFIGS.get(alias)
     if not config:
-        raise KeyError(f"Invalid model selection: {alias}")
+        raise KeyError(f"Invalid model selection: {alias}. Available: fast, balanced, smart")
 
     # Get the best available provider for this model class
     best_provider = await model_router.get_best_provider(alias)
@@ -70,10 +70,14 @@ async def resolve_model(alias: str) -> Tuple[str, str]:
         for provider, model in config["models"].items():
             if provider != best_provider:  # Skip the already tried provider
                 # Check if this provider is healthy
-                if await model_router._check_provider_health(provider):
+                is_healthy = await model_router._check_provider_health(provider)
+                if is_healthy:
                     best_provider = provider
                     model_name = model
-                    logger.warning(f"Falling back to {best_provider.value} for {alias} (model not available on {model_router.get_best_provider.__name__})")
+                    logger.warning(
+                        f"Falling back to {best_provider.value} for {alias} "
+                        f"(model not available on primary provider)"
+                    )
                     break
 
     if not model_name:
@@ -84,6 +88,13 @@ async def resolve_model(alias: str) -> Tuple[str, str]:
                 model_name = model
                 logger.warning(f"Emergency fallback to {best_provider.value} for {alias}")
                 break
+
+    if not model_name:
+        # All fallbacks exhausted
+        raise RuntimeError(
+            f"No available model provider for alias: {alias}. "
+            f"Please configure at least one AI provider."
+        )
 
     provider_name = best_provider.value
     logger.info(f"Resolved {alias} -> {provider_name}/{model_name}")

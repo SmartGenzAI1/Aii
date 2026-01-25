@@ -5,6 +5,48 @@ All notable changes to GenZ AI will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.4] - 2026-01-25
+
+### 🎯 Major Quality, Stability & Security Upgrade
+
+#### Added
+- **Enhanced Error Handling**: Comprehensive error types with proper error codes and messages
+- **Improved Request Validation**: Strict input validation in all API endpoints
+- **Better Async/Await Management**: Proper handling of streaming and concurrent operations
+- **Advanced Rate Limiting**: Memory-optimized rate limiter with cleanup mechanisms
+- **Provider Error Recovery**: Better fallback logic with detailed error tracking
+- **Structured Error Logging**: Request context and user tracking in all logs
+- **Health Check Enhancements**: Better status reporting with proper HTTP codes
+
+#### Fixed
+- **Critical Bug Fixes**:
+  - Fixed rate limiter memory leaks
+  - Fixed async error propagation in chat routes
+  - Fixed missing error response headers
+  - Fixed improper null handling in models
+  - Fixed circuit breaker state transitions
+- **Type Safety**: Removed @ts-nocheck directives, improved TypeScript coverage
+- **Provider Issues**: Better error messages and key rotation in multi-key providers
+- **Request Handling**: Proper Content-Type headers in all responses
+
+#### Changed
+- **Version**: Updated to 1.1.4
+- **Error Messages**: More user-friendly and actionable error descriptions
+- **Logging**: Enhanced with request context, user IDs, and detailed stack traces
+- **Configuration Validation**: More comprehensive startup checks with detailed feedback
+- **Rate Limiting**: Improved algorithm with sliding window and memory management
+
+#### Security
+- **Input Validation**: Stricter validation of all user inputs
+- **Error Messages**: No sensitive information leakage in error responses
+- **Rate Limiting**: Protection against brute force and DoS attacks
+- **API Key Handling**: Better security in API key storage and rotation
+
+#### Performance
+- **Memory Optimization**: Automatic cleanup in rate limiter
+- **Error Recovery**: Faster provider failover with better tracking
+- **Streaming**: Improved async streaming with proper error handling
+
 ## [1.1.2] - 2026-01-20
 
 ### 🚀 Major Scalability & UX Improvements
