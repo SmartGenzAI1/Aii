@@ -235,6 +235,3 @@ async def refresh_token(
             "is_admin": current_user.is_admin,
         }
     )
-
-
- 
