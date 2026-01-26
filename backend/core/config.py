@@ -246,7 +246,7 @@ def validate_startup():
     if settings.OPENAI_API_KEY:
         providers.append("OpenAI")
 
-    print(f"\n✅ Configuration validated for {settings.ENV.upper()} environment")
+    print(f"\n Configuration validated for {settings.ENV.upper()} environment")
     print(f"   Database: {db_type}")
     print(f"   AI Providers: {', '.join(providers) if providers else 'None configured'}")
     print(f"   Log Level: {settings.LOG_LEVEL}")
