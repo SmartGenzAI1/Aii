@@ -1,144 +1,82 @@
+# GenZ AI Backend - Production Requirements
+# Core Framework Dependencies
 fastapi>=0.111
 uvicorn[standard]>=0.30
-python-dotenv
+python-dotenv>=1.0.0
+
+# Data Validation & Settings
 pydantic>=2.7
 pydantic[email]>=2.7
-python-jose[cryptography]
-passlib[bcrypt]
-httpx
-aiohttp>=3.9
 pydantic-settings>=2.2
+
+# Authentication & Security
+python-jose[cryptography]>=3.3.0
+passlib[bcrypt]>=1.7.4
+pyjwt>=2.8.0
+bcrypt>=4.1.3
+cryptography>=43.0.0
+email-validator>=2.2.0
+
+# Database & ORM
+sqlalchemy>=2.0
 asyncpg>=0.29
 psycopg[binary]>=3.1
-sqlalchemy>=2.0
+sqlalchemy-utils>=0.41.1
+
+# HTTP & Networking
+httpx>=0.27.0
+aiohttp>=3.9
 requests>=2.31.0
+
+# Web Parsing & Utilities
 beautifulsoup4>=4.12.3
 lxml>=5.2.1
+python-multipart>=0.0.9
+
+# CLI & Utilities
 click>=8.1.7
 typer>=0.12.0
 psutil>=5.9.0
 python-magic>=0.4.27
 filetype>=1.2.0
-# Observability and metrics
+
+# Performance & Optimization
+orjson>=3.10.0
+anyio>=4.0.0
+cachetools>=5.3.3
+
+# Monitoring & Observability
 prometheus-client>=0.20.0
-# Tracing
+sentry-sdk>=2.0.0
+healthcheck>=1.0.0
+
+# Tracing & Instrumentation
 opentelemetry-sdk>=1.26.0
 opentelemetry-exporter-otlp>=1.26.0
 opentelemetry-instrumentation-fastapi>=0.47b0
-# Rate limiting backend
+
+# Rate Limiting
 redis>=5.0.1
-# Auth (PyJWT used in core/security.py)
-pyjwt>=2.8.0
-# Migrations and server
-alembic>=1.12.1
-gunicorn>=21.2.0
-# Testing and load testing
-pytest>=7.4.0
-locust>=2.20.0
-# Email validation dependency (required for pydantic EmailStr)
-email-validator>=2.2.0
-# Security dependencies
-bcrypt>=4.1.3
-cryptography>=43.0.0
-# Production monitoring
-sentry-sdk>=2.0.0
-# Health checks
-healthcheck>=1.0.0
-# Database utilities
-sqlalchemy-utils>=0.41.1
-# Performance optimization
-orjson>=3.10.0
-# Async utilities
-anyio>=4.0.0
-# File handling
-python-multipart>=0.0.9
-# Web framework utilities
-starlette>=0.37.2
-# Environment management
-python-decouple>=3.8.0
-# Caching
-cachetools>=5.3.3
-# Rate limiting
 slowapi>=0.1.8
-# Security headers
+
+# Security
 secure>=0.3.0
+
 # Logging
 loguru>=0.7.2
+
 # Configuration
-dynaconf>=3.2.4
-# Testing
+python-decouple>=3.8.0
+
+# Migration & Deployment
+alembic>=1.12.1
+gunicorn>=21.2.0
+
+# Testing (Production Essentials)
+pytest>=7.4.0
 pytest-asyncio>=0.23.0
-# Database testing
-pytest-postgresql>=5.0.0
-# API testing
-httpx>=0.27.0
-# Web testing
-selenium>=4.21.0
-# Performance testing
-locust>=2.20.0
-# Documentation
-mkdocs>=1.6.0
-# Code quality
-black>=24.0.0
-isort>=5.13.0
-flake8>=7.0.0
-mypy>=1.10.0
-# Type checking
-types-requests>=2.31.0.20240406
-types-python-jose>=3.3.4.20240106
-types-passlib>=1.7.4.20240106
-types-beautifulsoup4>=4.12.0.20240106
-types-lxml>=2024.1.10
-types-click>=7.1.8.20240106
-types-typer>=0.9.0.20240106
-types-psutil>=5.9.0.20240106
-types-python-magic>=0.4.27.20240106
-types-filetype>=1.2.0.20240106
-types-prometheus-client>=0.20.0.20240106
-types-redis>=4.6.0.20240106
-types-pyjwt>=2.8.0.20240106
-types-alembic>=1.12.1.20240106
-types-gunicorn>=21.2.0.20240106
-types-pytest>=7.4.0.20240106
-types-locust>=2.20.0.20240106
-types-mkdocs>=1.6.0.20240106
-types-black>=24.0.0.20240106
-types-isort>=5.13.0.20240106
-types-flake8>=7.0.0.20240106
-types-mypy>=1.10.0.20240106
-# Development tools
-ipython>=8.24.0
-jupyter>=1.0.0
-notebook>=7.2.0
-# Build tools
-setuptools>=70.0.0
-wheel>=0.43.0
-twine>=5.0.0
-# Virtual environment
-virtualenv>=20.25.0
-# Docker
-docker>=7.0.0
-# Kubernetes
-kubernetes>=29.0.0
-# Cloud
+
+# Cloud & Storage (Optional)
 boto3>=1.34.0
 google-cloud-storage>=2.16.0
 azure-storage-blob>=12.19.0
-# CI/CD
-github-actions>=0.1.0
-# Monitoring
-prometheus-client>=0.20.0
-# Tracing
-opentelemetry-sdk>=1.26.0
-opentelemetry-exporter-otlp>=1.26.0
-opentelemetry-instrumentation-fastapi>=0.47b0
-# Rate limiting backend
-redis>=5.0.1
-# Auth (PyJWT used in core/security.py)
-pyjwt>=2.8.0
-# Migrations and server
-alembic>=1.12.1
-gunicorn>=21.2.0
-# Testing and load testing
-pytest>=7.4.0
-locust>=2.20.0
