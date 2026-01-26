@@ -4,7 +4,7 @@
 # - Gunicorn with Uvicorn workers
 # - Installs only backend dependencies
 
-FROM python:3.11-slim AS base
+FROM python:3.13-slim AS base
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \

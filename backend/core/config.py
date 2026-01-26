@@ -156,7 +156,7 @@ class Settings(BaseSettings):
     @property
     def effective_database_url(self) -> str:
         """Get the effective database URL, falling back to SQLite for local development.
-        
+
         This ensures proper async driver handling for PostgreSQL connections.
         """
         if self.DATABASE_URL:
@@ -179,23 +179,28 @@ class Settings(BaseSettings):
 # Singleton instance
 settings = Settings()
 
-
-# Validate critical settings at startup
 def validate_startup():
     """Called in app startup to verify all critical settings."""
     errors = []
+    warnings = []
 
     # JWT secret validation for production
     if settings.is_production() and not settings.JWT_SECRET:
         errors.append("JWT_SECRET not configured in production - required for security")
+    elif settings.is_production() and settings.JWT_SECRET and len(settings.JWT_SECRET) < 32:
+        errors.append("JWT_SECRET must be at least 32 characters for production security")
 
     # CORS validation for production
     if settings.is_production() and not settings.allowed_origins:
         errors.append("ALLOWED_ORIGINS not configured in production - required for CORS")
+    elif settings.is_production() and len(settings.allowed_origins) == 0:
+        errors.append("ALLOWED_ORIGINS cannot be empty in production")
 
     # Database validation for production
     if settings.is_production() and not settings.DATABASE_URL:
         errors.append("DATABASE_URL not configured in production - SQLite fallback not suitable")
+    elif settings.is_production() and settings.DATABASE_URL and settings.DATABASE_URL.startswith("sqlite"):
+        warnings.append("Using SQLite in production - not recommended for high traffic")
 
     # AI providers validation
     has_providers = (
@@ -204,12 +209,30 @@ def validate_startup():
         settings.HUGGINGFACE_API_KEY or
         settings.OPENAI_API_KEY
     )
-    
+
     if settings.is_production() and not has_providers:
         errors.append("No AI providers configured - configure at least one provider (Groq, OpenRouter, HuggingFace, or OpenAI)")
+    elif settings.is_production() and not has_providers:
+        warnings.append("No AI providers configured - application will run in limited mode")
+
+    # Email validation dependency check
+    try:
+        import email_validator
+    except ImportError:
+        errors.append("email-validator package not installed - required for EmailStr validation. Run 'pip install email-validator'")
+
+    # Security dependencies check
+    try:
+        import bcrypt
+        import cryptography
+    except ImportError:
+        errors.append("Security dependencies (bcrypt, cryptography) not installed. Run 'pip install bcrypt cryptography'")
 
     if errors:
-        raise RuntimeError(f"Configuration validation failed:\n  • " + "\n  • ".join(errors))
+        error_message = f"Configuration validation failed:\n  • " + "\n  • ".join(errors)
+        if warnings:
+            error_message += f"\n\nWarnings:\n  • " + "\n  • ".join(warnings)
+        raise RuntimeError(error_message)
 
     # Show configuration summary
     db_type = "PostgreSQL" if settings.DATABASE_URL else "SQLite (local fallback)"
@@ -222,9 +245,15 @@ def validate_startup():
         providers.append("HuggingFace")
     if settings.OPENAI_API_KEY:
         providers.append("OpenAI")
-    
+
     print(f"\n✅ Configuration validated for {settings.ENV.upper()} environment")
     print(f"   Database: {db_type}")
     print(f"   AI Providers: {', '.join(providers) if providers else 'None configured'}")
-    print(f"   Log Level: {settings.LOG_LEVEL}\n")
-    print(f"Database: {db_type}")
+    print(f"   Log Level: {settings.LOG_LEVEL}")
+
+    if warnings:
+        print(f"\n⚠️  Warnings:")
+        for warning in warnings:
+            print(f"   • {warning}")
+
+    print(f"\nDatabase: {db_type}")
